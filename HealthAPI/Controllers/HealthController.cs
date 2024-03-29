@@ -9,6 +9,11 @@ namespace HealthAPI.Controllers
     {
         private readonly ILogger<HealthController> _logger;
 
+        private JsonSerializerOptions _serializerOptions = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+        };
+
         private string[] _applicationNames = new string[]
         {
             "enshrouded_server",
@@ -36,7 +41,7 @@ namespace HealthAPI.Controllers
                     response.statusList.Add(new ApplicationStatus() { Name = app, Status = "down" });
             }
 
-            return JsonSerializer.Serialize(response);
+            return JsonSerializer.Serialize(response, _serializerOptions);
         }
     }
 }
