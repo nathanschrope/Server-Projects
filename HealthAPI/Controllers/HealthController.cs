@@ -7,6 +7,13 @@ namespace HealthAPI.Controllers
     {
         private readonly ILogger<HealthController> _logger;
 
+        private string[] _applicationNames = new string[]
+        {
+            "enshrouded_server.exe",
+            "SonsOfTheFRorestDS.exe",
+            "valheim_server.exe"
+        };
+
         public HealthController(ILogger<HealthController> logger)
         {
             _logger = logger;
