@@ -4,11 +4,10 @@ namespace HealthAPI
 {
     public class ApplicationChecker
     {
-        private readonly ILogger<ApplicationChecker> _logger;
 
-        public ApplicationChecker(ILogger<ApplicationChecker> logger)
+        public ApplicationChecker()
         {
-            _logger = logger;
+
         }
 
         public bool IsApplicationRunning(string applicationName)

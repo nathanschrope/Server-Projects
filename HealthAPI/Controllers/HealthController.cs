@@ -1,17 +1,19 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace HealthAPI.Controllers
 {
     [ApiController]
+    [Route("[controller]")]
     public class HealthController : Controller
     {
         private readonly ILogger<HealthController> _logger;
 
         private string[] _applicationNames = new string[]
         {
-            "enshrouded_server.exe",
-            "SonsOfTheFRorestDS.exe",
-            "valheim_server.exe"
+            "enshrouded_server",
+            "SonsOfTheForestDS",
+            "valheim_server"
         };
 
         public HealthController(ILogger<HealthController> logger)
@@ -19,10 +21,22 @@ namespace HealthAPI.Controllers
             _logger = logger;
         }
 
-        [HttpGet(Name = "health")]
+        [HttpGet]
+        [Route("")]
         public string Get()
         {
-            return "healthy";
+            HealthResponse response = new HealthResponse();
+            ApplicationChecker applicationChecker = new ApplicationChecker();
+
+            foreach (var app in _applicationNames)
+            {
+                if (applicationChecker.IsApplicationRunning(app))
+                    response.statusList.Add(new ApplicationStatus() { Name = app, Status = "healthy"});
+                else
+                    response.statusList.Add(new ApplicationStatus() { Name = app, Status = "down" });
+            }
+
+            return JsonSerializer.Serialize(response);
         }
     }
 }
