@@ -18,7 +18,8 @@ namespace HealthAPI.Controllers
         {
             "enshrouded_server",
             "SonsOfTheForestDS",
-            "valheim_server"
+            "valheim_server",
+            "Backup"
         };
 
         public HealthController(ILogger<HealthController> logger)
