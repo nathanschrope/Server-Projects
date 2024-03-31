@@ -1,6 +1,6 @@
-﻿namespace Backup
+﻿namespace CommonLibrary
 {
-    internal class Service
+    public class Service
     {
         public string Name { get; set; }
         public string CheckTitle { get; set; } = "";

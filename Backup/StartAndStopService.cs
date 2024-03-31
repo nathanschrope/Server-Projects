@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using CommonLibrary;
 
 namespace Backup
 {
@@ -21,7 +22,7 @@ namespace Backup
             _services.Add(new Service("enshrouded_server"));
             _services.Add(new Service("SonsOfTheForestDS"));
             _services.Add(new Service("valheim_server"));
-            _services.Add(new Service("Minecraft") { CheckTitle="java"});
+            _services.Add(new Service("minecraft") { CheckTitle="java"});
         }
 
         public async Task StopServicesAsync()
