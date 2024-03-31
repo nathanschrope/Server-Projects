@@ -9,6 +9,7 @@ namespace Backup
         private readonly List<string> _directories = new List<string>()
         {
             "C:\\Steam",
+            "C:\\minecraft",
             "C:\\Users\\admin\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup",
             "C:\\Users\\admin\\AppData\\LocalLow\\IronGate\\Valheim",
             "C:\\Users\\admin\\AppData\\LocalLow\\Endnight\\SonsOfTheForestDS"
@@ -36,7 +37,7 @@ namespace Backup
                     {
                         _logger.LogInformation($"Getting Backup of {dir} to {_backupPath}");
                         var dirInfo = new DirectoryInfo(dir);
-                        var fileName = "Backup_" + DateTime.Now.ToString(DATETIME_PATTERN) + "_" + dirInfo.Name + ".zip";
+                        var fileName = "Backup_" + dirInfo.Name + "_" + DateTime.Now.ToString(DATETIME_PATTERN) + ".zip";
                         if (!File.Exists(_backupPath + "\\" + fileName))
                             ZipFile.CreateFromDirectory(dir, _backupPath + "\\" + fileName);
                     }
@@ -57,13 +58,13 @@ namespace Backup
                 if (Directory.Exists(dir))
                 {
                     var dirInfo = new DirectoryInfo(dir);
-                    var files = Directory.GetFiles(_backupPath, "Backup_*_" + dirInfo.Name + ".zip");
+                    var files = Directory.GetFiles(_backupPath, "Backup_" + dirInfo.Name + "_*.zip");
                     if (files.Length > BACKUP_COUNT) //some have to go
                     {
                         var sortedList = new List<DateTime>();
                         foreach (var zip in files)
                         {
-                            Regex regex = new Regex($"^.*\\Backup_(?<Date>\\d*)_{dirInfo.Name}.zip");
+                            Regex regex = new Regex($"^.*\\Backup_{dirInfo.Name}_(?<Date>\\d*).zip");
                             var matches = regex.Match(zip).Groups;
                             if (matches.ContainsKey("Date"))
                             {
@@ -79,7 +80,7 @@ namespace Backup
 
                         for (int i = 0; i < sortedList.Count - BACKUP_COUNT; i++)
                         {
-                            var fileName = $"\\Backup_{sortedList[0].ToString(DATETIME_PATTERN)}_{dirInfo.Name}.zip";
+                            var fileName = $"\\Backup_{dirInfo.Name}_{sortedList[0].ToString(DATETIME_PATTERN)}.zip";
                             _logger.LogInformation($"Deleting {fileName}");
                             File.Delete(_backupPath + fileName);
                         }

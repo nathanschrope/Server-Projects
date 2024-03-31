@@ -5,7 +5,7 @@ namespace Backup
     public class StartAndStopService
     {
         private readonly ILogger _logger;
-        private List<string> _services;
+        private List<Service> _services;
         private Dictionary<string, bool> _running;
         private readonly string _startUpFolder = "C:\\Users\\admin\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\";
         public StartAndStopService(ILogger<StartAndStopService> logger) 
@@ -18,9 +18,10 @@ namespace Backup
 
         public void Configure()
         {
-            _services.Add("enshrouded_server");
-            _services.Add("SonsOfTheForestDS");
-            _services.Add("valheim_server");
+            _services.Add(new Service("enshrouded_server"));
+            _services.Add(new Service("SonsOfTheForestDS"));
+            _services.Add(new Service("valheim_server"));
+            _services.Add(new Service("Minecraft") { CheckTitle="java"});
         }
 
         public async Task StopServicesAsync()
@@ -30,13 +31,29 @@ namespace Backup
             {
                 try
                 {
-                    var processes = Process.GetProcessesByName(service);
-                    _logger.LogInformation($"{service} found {processes.Length} services");
+                    var processes = Process.GetProcessesByName(service.Name);
+                    _logger.LogInformation($"1. {service.Name} found {processes.Length} services");
+
+                    if (processes.Length != 1 && !String.IsNullOrEmpty(service.CheckTitle))
+                    {
+                        processes = Process.GetProcessesByName(service.CheckTitle);
+                        _logger.LogInformation($"2. {service.Name} found {processes.Length} services");
+                        processes = processes.Where(x => x.MainWindowTitle.Equals(service.Name, StringComparison.OrdinalIgnoreCase)).ToArray();
+                    }
+
+
                     if (processes.Length == 1)
                     {
                         var process = processes[0];
-                        _running.Add(service, process.CloseMainWindow());
-                        tasks.Add(processes[0].WaitForExitAsync());
+
+                        var wasClosed = process.CloseMainWindow();
+                        _logger.LogInformation($"{service.Name} closing: {wasClosed}");
+
+                        if (wasClosed)
+                        {
+                            _running.Add(service.Name, true);
+                            tasks.Add(processes[0].WaitForExitAsync());
+                        }
                     }
                 }
                 catch (Exception e)

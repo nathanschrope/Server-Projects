@@ -4,7 +4,7 @@ using System.Text.Json;
 namespace HealthAPI.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("Server")]
     public class HealthController : Controller
     {
         private readonly ILogger<HealthController> _logger;
@@ -19,7 +19,8 @@ namespace HealthAPI.Controllers
             "enshrouded_server",
             "SonsOfTheForestDS",
             "valheim_server",
-            "Backup"
+            "Minecraft",
+            "Backup",
         };
 
         public HealthController(ILogger<HealthController> logger)
@@ -28,7 +29,7 @@ namespace HealthAPI.Controllers
         }
 
         [HttpGet]
-        [Route("")]
+        [Route("health")]
         public string Get()
         {
             HealthResponse response = new HealthResponse();
