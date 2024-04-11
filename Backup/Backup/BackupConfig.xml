@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BackupConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+	<FileCount>3</FileCount>
+	<Directories>
+		<string>C:\Steam</string>
+		<string>C:\minecraft</string>
+		<string>C:\Users\admin\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup</string>
+		<string>C:\Users\admin\AppData\LocalLow\IronGate\Valheim</string>
+		<string>C:\Users\admin\AppData\LocalLow\Endnight\SonsOfTheForestDS</string>
+		<!--enshrouded is included in game files-->
+	</Directories>
+	<BackupPath>\\10.0.0.14\NetworkStorage\ServerBackup</BackupPath>
+</BackupConfig>

@@ -38,11 +38,11 @@ namespace HealthAPI.Controllers
             {
                 _logger.LogInformation($"Finding {app.Name} {app.CheckTitle} to check health");
                 if (applicationChecker.IsApplicationRunningByName(app.Name))
-                    response.statusList.Add(new ApplicationStatus() { Name = app.Name, Status = "healthy"});
+                    response.StatusList.Add(new ApplicationStatus() { Name = app.Name, Status = "healthy"});
                 else if(!String.IsNullOrEmpty(app.CheckTitle) && applicationChecker.IsApplicationRunningByTitle(app.CheckTitle, app.Name))
-                    response.statusList.Add(new ApplicationStatus() { Name = app.Name, Status = "healthy" });
+                    response.StatusList.Add(new ApplicationStatus() { Name = app.Name, Status = "healthy" });
                 else
-                    response.statusList.Add(new ApplicationStatus() { Name = app.Name, Status = "down" });
+                    response.StatusList.Add(new ApplicationStatus() { Name = app.Name, Status = "down" });
             }
 
             return JsonSerializer.Serialize(response, _serializerOptions);

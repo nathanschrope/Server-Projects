@@ -2,19 +2,19 @@
 {
     public class HealthResponse
     {
-        public string status { get; set; } = "healthy";
-        public List<ApplicationStatus> statusList { get; set; }
+        public string Status { get; set; } = "healthy";
+        public List<ApplicationStatus> StatusList { get; set; }
 
         public HealthResponse()
         {
-            statusList = new List<ApplicationStatus>();
+            StatusList = new List<ApplicationStatus>();
         }
     }
 
     public class ApplicationStatus
     {
-        public string Name { get; set; }
-        public string Status { get; set; }
+        public string Name { get; set; } = "";
+        public string Status { get; set; } = "";
 
     }
 }

@@ -1,13 +1,15 @@
+using Backup.StartStop;
+
 namespace Backup
 {
     public class Worker : BackgroundService
     {
         private readonly ILogger<Worker> _logger;
-        private BackupService _backupService;
-        private StartAndStopService _startAndStopService;
+        private IBackupService _backupService;
+        private IStartStopService _startAndStopService;
 
 
-        public Worker(ILogger<Worker> logger, BackupService backupService, StartAndStopService startAndStopService)
+        public Worker(ILogger<Worker> logger, IBackupService backupService, IStartStopService startAndStopService)
         {
             _logger = logger;
             _backupService = backupService;
@@ -29,6 +31,8 @@ namespace Backup
                 _backupService.Backup();
 
                 _startAndStopService.StartServices();
+
+                _backupService.Cleanup();
 
                 //setup wait
                 var now = DateTime.UtcNow;

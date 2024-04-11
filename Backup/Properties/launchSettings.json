@@ -2,6 +2,7 @@
   "profiles": {
     "Backup": {
       "commandName": "Project",
+      "commandLineArgs": "DefaultConfig.xml",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       },

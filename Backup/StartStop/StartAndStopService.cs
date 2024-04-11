@@ -1,34 +1,26 @@
 ﻿using System.Diagnostics;
-using CommonLibrary;
 
-namespace Backup
+namespace Backup.StartStop
 {
-    public class StartAndStopService
+    public class StartAndStopService : IStartStopService
     {
         private readonly ILogger _logger;
-        private List<Service> _services;
-        private Dictionary<string, bool> _running;
-        private readonly string _startUpFolder = "C:\\Users\\admin\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\";
-        public StartAndStopService(ILogger<StartAndStopService> logger) 
+        private readonly StartStopConfig _config;
+        private readonly Dictionary<string, bool> _running;
+        public StartAndStopService(ILogger<StartAndStopService> logger, StartStopConfig config) 
         { 
             _logger = logger;
-            _services = new();
-            _running = new();
-            Configure();
-        }
+            _config = config;
+            _running = [];
 
-        public void Configure()
-        {
-            _services.Add(new Service("enshrouded_server"));
-            _services.Add(new Service("SonsOfTheForestDS"));
-            _services.Add(new Service("valheim_server"));
-            _services.Add(new Service("minecraft") { CheckTitle="java"});
+            //Replace %AppData%
+            _config.StartUpFolder = Environment.ExpandEnvironmentVariables(_config.StartUpFolder);
         }
 
         public async Task StopServicesAsync()
         {
             var tasks = new List<Task>();
-            foreach (var service in _services)
+            foreach (var service in _config.Services)
             {
                 try
                 {
@@ -75,7 +67,7 @@ namespace Backup
                 {
                     Process.Start(new ProcessStartInfo()
                     {
-                        FileName = _startUpFolder + service.Key + ".bat",
+                        FileName = _config.StartUpFolder + service.Key + ".bat",
                         UseShellExecute = true,
                     });
                 }

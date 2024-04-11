@@ -2,7 +2,7 @@
 {
     public class Service
     {
-        public string Name { get; set; }
+        public string Name { get; set; } = "";
         public string CheckTitle { get; set; } = "";
 
         public Service() { }

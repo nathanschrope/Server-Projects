@@ -3,43 +3,34 @@ using System.Text.RegularExpressions;
 
 namespace Backup
 {
-    public class BackupService
+    public class BackupService : IBackupService
     {
         private readonly ILogger<BackupService> _logger;
-        private readonly List<string> _directories = new List<string>()
-        {
-            "C:\\Steam",
-            "C:\\minecraft",
-            "C:\\Users\\admin\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup",
-            "C:\\Users\\admin\\AppData\\LocalLow\\IronGate\\Valheim",
-            "C:\\Users\\admin\\AppData\\LocalLow\\Endnight\\SonsOfTheForestDS"
-            //enshrouded is included in game files
-        };
-        private readonly string _backupPath = "\\\\10.0.0.14\\NetworkStorage\\ServerBackup";
-        private const int BACKUP_COUNT = 3;
         private const string DATETIME_PATTERN = "yyyyMMdd";
+        private BackupConfig _config;
 
-        public BackupService(ILogger<BackupService> logger)
+        public BackupService(ILogger<BackupService> logger, BackupConfig config)
         {
             _logger = logger;
+            _config = config;
         }
 
         public void Backup()
         {
-            if (!Directory.Exists(_backupPath))
-                Directory.CreateDirectory(_backupPath);
+            if (!Directory.Exists(_config.BackupPath))
+                Directory.CreateDirectory(_config.BackupPath);
 
-            foreach (var dir in _directories)
+            foreach (var dir in _config.Directories)
             {
                 if (Directory.Exists(dir))
                 {
                     try
                     {
-                        _logger.LogInformation($"Getting Backup of {dir} to {_backupPath}");
+                        _logger.LogInformation($"Getting Backup of {dir} to {_config.BackupPath}");
                         var dirInfo = new DirectoryInfo(dir);
                         var fileName = "Backup_" + dirInfo.Name + "_" + DateTime.Now.ToString(DATETIME_PATTERN) + ".zip";
-                        if (!File.Exists(_backupPath + "\\" + fileName))
-                            ZipFile.CreateFromDirectory(dir, _backupPath + "\\" + fileName);
+                        if (!File.Exists(_config.BackupPath + "\\" + fileName))
+                            ZipFile.CreateFromDirectory(dir, _config.BackupPath + "\\" + fileName);
                     }
                     catch (Exception e)
                     {
@@ -51,15 +42,18 @@ namespace Backup
                     _logger.LogWarning($"Directory does not exist: {dir}");
                 }
             }
+        }
 
+        public void Cleanup()
+        {
             //cleanup if needed
-            foreach (var dir in _directories)
+            foreach (var dir in _config.Directories)
             {
                 if (Directory.Exists(dir))
                 {
                     var dirInfo = new DirectoryInfo(dir);
-                    var files = Directory.GetFiles(_backupPath, "Backup_" + dirInfo.Name + "_*.zip");
-                    if (files.Length > BACKUP_COUNT) //some have to go
+                    var files = Directory.GetFiles(_config.BackupPath, "Backup_" + dirInfo.Name + "_*.zip");
+                    if (files.Length > _config.FileCount) //some have to go
                     {
                         var sortedList = new List<DateTime>();
                         foreach (var zip in files)
@@ -70,7 +64,9 @@ namespace Backup
                             {
                                 try
                                 {
-                                    sortedList.Add(DateTime.ParseExact(matches.GetValueOrDefault("Date").Value, DATETIME_PATTERN, null));
+                                    var match = matches.GetValueOrDefault("Date");
+                                    if (match != null)
+                                        sortedList.Add(DateTime.ParseExact(match.Value, DATETIME_PATTERN, null));
                                 }
                                 catch { }
                             }
@@ -78,11 +74,12 @@ namespace Backup
 
                         sortedList.Sort();
 
-                        for (int i = 0; i < sortedList.Count - BACKUP_COUNT; i++)
+                        for (int i = 0; i < sortedList.Count - _config.FileCount; i++)
                         {
                             var fileName = $"\\Backup_{dirInfo.Name}_{sortedList[0].ToString(DATETIME_PATTERN)}.zip";
                             _logger.LogInformation($"Deleting {fileName}");
-                            File.Delete(_backupPath + fileName);
+
+                            File.Delete(_config.BackupPath + fileName);
                         }
                     }
                 }
