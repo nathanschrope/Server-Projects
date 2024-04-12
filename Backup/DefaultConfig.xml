@@ -15,10 +15,19 @@
 	<StartStopConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
 		<StartUpFolder>%AppData%\Microsoft\Windows\Start Menu\Programs\Startup\</StartUpFolder>
 		<Services>
-			<Service Name="enshrouded_server"/>
-			<Service Name="SonsOfTheForestDS"/>
-			<Service Name="valheim_server"/>
-			<Service Name="minecraft" CheckTitle="java"/>
+			<Service Name="enshrouded_server">
+				<Name>enshrouded_server</Name>
+			</Service>
+			<Service>
+				<Name>SonsOfTheForestDS</Name>
+			</Service>
+			<Service>
+				<Name>valheim_server</Name>
+			</Service>
+			<Service>
+				<Name>minecraft</Name>
+				<CheckTitle>java</CheckTitle>
+			</Service>
 		</Services>
 	</StartStopConfig>
 </Config>

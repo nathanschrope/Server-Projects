@@ -14,26 +14,12 @@ namespace Backup
             _logger = logger;
             _backupService = backupService;
             _startAndStopService = startAndStopService;
-            configureServers();
-        }
-
-        public void configureServers()
-        {
-
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             do
             {
-                await _startAndStopService.StopServicesAsync().ConfigureAwait(false);
-
-                _backupService.Backup();
-
-                _startAndStopService.StartServices();
-
-                _backupService.Cleanup();
-
                 //setup wait
                 var now = DateTime.UtcNow;
                 var nextBackupTime = new DateTime(now.Year, now.Month, now.Day, 8, 0, 0);
@@ -45,6 +31,14 @@ namespace Backup
                 _logger.LogInformation($"Next Backup time: {nextBackupTime}");
 
                 await Task.Delay(new TimeSpan(nextBackupTime.Ticks - now.Ticks));
+
+                await _startAndStopService.StopServicesAsync().ConfigureAwait(false);
+
+                _backupService.Backup();
+
+                _startAndStopService.StartServices();
+
+                _backupService.Cleanup();
             }
             while (!stoppingToken.IsCancellationRequested);
         }

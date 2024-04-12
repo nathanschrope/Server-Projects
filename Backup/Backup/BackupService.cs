@@ -13,6 +13,14 @@ namespace Backup
         {
             _logger = logger;
             _config = config;
+
+            _logger.LogInformation($"Backup + FileCount: {config.FileCount}");
+            _logger.LogInformation($"Backup + BackupPath: {config.BackupPath}");
+            _logger.LogInformation($"Backup + Directories Count: {config.Directories.Count}");
+            foreach (var dir in config.Directories)
+            {
+                _logger.LogInformation($"\t {dir}");
+            }
         }
 
         public void Backup()

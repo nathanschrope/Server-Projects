@@ -15,6 +15,14 @@ namespace Backup.StartStop
 
             //Replace %AppData%
             _config.StartUpFolder = Environment.ExpandEnvironmentVariables(_config.StartUpFolder);
+
+            _logger.LogInformation($"StartStop + StartUpFolder: {_config.StartUpFolder}");
+            _logger.LogInformation($"StartStop + Service Count: {_config.Services.Count}");
+
+            foreach (var ser in config.Services)
+            {
+                _logger.LogInformation($"\t {ser.Name} ({ser.CheckTitle})");
+            }
         }
 
         public async Task StopServicesAsync()

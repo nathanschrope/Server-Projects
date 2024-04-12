@@ -1,4 +1,4 @@
-﻿namespace HealthAPI
+﻿namespace CommonLibrary
 {
     public class HealthResponse
     {
