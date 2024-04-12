@@ -32,12 +32,16 @@ namespace Backup
 
                 await Task.Delay(new TimeSpan(nextBackupTime.Ticks - now.Ticks));
 
+                _logger.LogInformation($"Stopping services at {DateTime.UtcNow}");
                 await _startAndStopService.StopServicesAsync().ConfigureAwait(false);
 
+                _logger.LogInformation($"Starting Backup at {DateTime.UtcNow}");
                 _backupService.Backup();
 
+                _logger.LogInformation($"Starting services at {DateTime.UtcNow}");
                 _startAndStopService.StartServices();
 
+                _logger.LogInformation($"Starting cleanup at {DateTime.UtcNow}");
                 _backupService.Cleanup();
             }
             while (!stoppingToken.IsCancellationRequested);
