@@ -1,16 +1,9 @@
 using Backup;
 using Backup.StartStop;
+using CommonLibrary.XML;
 using System.Xml.Serialization;
 
-Config config = new Config()
-{
-    BackupConfig = new BackupConfig()
-    {
-        BackupPath = Directory.GetCurrentDirectory(),
-        FileCount = 1
-    },
-    StartStopConfig = new StartStopConfig()
-};
+Config config = new Config();
 
 if (args.Length > 1)
     throw new ArgumentException("Invalid number of Arguments");
@@ -26,22 +19,10 @@ else if (args.Length == 1)
 
 
 var builder = Host.CreateApplicationBuilder(args);
-builder.Services.AddSingleton(x =>
-{
-    var logger = x.GetService<ILogger<BackupService>>();
-    return logger == null
-        ? throw new Exception()
-        : (IBackupService)ActivatorUtilities.CreateInstance<BackupService>(x, logger, config.BackupConfig);
-}
-);
-builder.Services.AddSingleton(x =>
-{
-    var logger = x.GetService<ILogger<StartAndStopService>>();
-    return logger == null
-        ? throw new Exception()
-        : (IStartStopService)ActivatorUtilities.CreateInstance<StartAndStopService>(x, logger, config.StartStopConfig);
-}
-);
+builder.Services.AddSingleton(typeof(CommonLibrary.StartStop.IConfig<CommonLibrary.StartStop.IApplication>), config);
+builder.Services.AddSingleton(typeof(CommonLibrary.Backup.IConfig<CommonLibrary.Backup.IApplication>), config);
+builder.Services.AddSingleton<IBackupService, BackupService>();
+builder.Services.AddSingleton<IStartStopService, StartAndStopService>();
 builder.Services.AddHostedService<Worker>();
 
 var host = builder.Build();

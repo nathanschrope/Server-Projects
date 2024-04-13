@@ -1,4 +1,5 @@
-﻿using System.IO.Compression;
+﻿using CommonLibrary.Backup;
+using System.IO.Compression;
 using System.Text.RegularExpressions;
 
 namespace Backup
@@ -7,47 +8,52 @@ namespace Backup
     {
         private readonly ILogger<BackupService> _logger;
         private const string DATETIME_PATTERN = "yyyyMMdd";
-        private BackupConfig _config;
+        private IConfig<IApplication> _config;
 
-        public BackupService(ILogger<BackupService> logger, BackupConfig config)
+        public BackupService(ILogger<BackupService> logger, IConfig<IApplication> config)
         {
             _logger = logger;
             _config = config;
 
-            _logger.LogInformation($"Backup + FileCount: {config.FileCount}");
-            _logger.LogInformation($"Backup + BackupPath: {config.BackupPath}");
-            _logger.LogInformation($"Backup + Directories Count: {config.Directories.Count}");
-            foreach (var dir in config.Directories)
+            _logger.LogInformation($"Backup + FileCount: {config.MaximumBackupFilePerApplication}");
+            _logger.LogInformation($"Backup + BackupPath: {config.BackUpPath}");
+            _logger.LogInformation($"Backup + Directories Count: {config.Applications.Count()}");
+            foreach (var app in config.Applications)
             {
-                _logger.LogInformation($"\t {dir}");
+                _logger.LogInformation($"\t {app}");
             }
         }
 
         public void Backup()
         {
-            if (!Directory.Exists(_config.BackupPath))
-                Directory.CreateDirectory(_config.BackupPath);
+            if (!Directory.Exists(_config.BackUpPath))
+                Directory.CreateDirectory(_config.BackUpPath);
 
-            foreach (var dir in _config.Directories)
+            foreach (var app in _config.Applications)
             {
-                if (Directory.Exists(dir))
+                foreach (var dir in app.Directories)
                 {
-                    try
+
+                    if (Directory.Exists(dir))
                     {
-                        _logger.LogInformation($"Getting Backup of {dir} to {_config.BackupPath}");
-                        var dirInfo = new DirectoryInfo(dir);
-                        var fileName = "Backup_" + dirInfo.Name + "_" + DateTime.Now.ToString(DATETIME_PATTERN) + ".zip";
-                        if (!File.Exists(_config.BackupPath + "\\" + fileName))
-                            ZipFile.CreateFromDirectory(dir, _config.BackupPath + "\\" + fileName);
+                        try
+                        {
+                            _logger.LogInformation($"Getting Backup of {dir} to {_config.BackUpPath}");
+                            var dirInfo = new DirectoryInfo(dir);
+                            var fileName = "Backup_" + dirInfo.Name + "_" + DateTime.Now.ToString(DATETIME_PATTERN) + ".zip";
+                            if (!File.Exists(_config.BackUpPath + "\\" + fileName))
+                                ZipFile.CreateFromDirectory(dir, _config.BackUpPath + "\\" + fileName);
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogError(e, $"ZIP FAILED {dir}");
+                        }
                     }
-                    catch (Exception e)
+                    else
                     {
-                        _logger.LogError(e, $"ZIP FAILED {dir}");
+                        _logger.LogWarning($"Directory does not exist: {dir}");
                     }
-                }
-                else
-                {
-                    _logger.LogWarning($"Directory does not exist: {dir}");
+
                 }
             }
         }
@@ -55,39 +61,42 @@ namespace Backup
         public void Cleanup()
         {
             //cleanup if needed
-            foreach (var dir in _config.Directories)
+            foreach (var app in _config.Applications)
             {
-                if (Directory.Exists(dir))
+                foreach (var dir in app.Directories)
                 {
-                    var dirInfo = new DirectoryInfo(dir);
-                    var files = Directory.GetFiles(_config.BackupPath, "Backup_" + dirInfo.Name + "_*.zip");
-                    if (files.Length > _config.FileCount) //some have to go
+                    if (Directory.Exists(dir))
                     {
-                        var sortedList = new List<DateTime>();
-                        foreach (var zip in files)
+                        var dirInfo = new DirectoryInfo(dir);
+                        var files = Directory.GetFiles(_config.BackUpPath, "Backup_" + dirInfo.Name + "_*.zip");
+                        if (files.Length > _config.MaximumBackupFilePerApplication) //some have to go
                         {
-                            Regex regex = new Regex($"^.*\\Backup_{dirInfo.Name}_(?<Date>\\d*).zip");
-                            var matches = regex.Match(zip).Groups;
-                            if (matches.ContainsKey("Date"))
+                            var sortedList = new List<DateTime>();
+                            foreach (var zip in files)
                             {
-                                try
+                                Regex regex = new Regex($"^.*\\Backup_{dirInfo.Name}_(?<Date>\\d*).zip");
+                                var matches = regex.Match(zip).Groups;
+                                if (matches.ContainsKey("Date"))
                                 {
-                                    var match = matches.GetValueOrDefault("Date");
-                                    if (match != null)
-                                        sortedList.Add(DateTime.ParseExact(match.Value, DATETIME_PATTERN, null));
+                                    try
+                                    {
+                                        var match = matches.GetValueOrDefault("Date");
+                                        if (match != null)
+                                            sortedList.Add(DateTime.ParseExact(match.Value, DATETIME_PATTERN, null));
+                                    }
+                                    catch { }
                                 }
-                                catch { }
                             }
-                        }
 
-                        sortedList.Sort();
+                            sortedList.Sort();
 
-                        for (int i = 0; i < sortedList.Count - _config.FileCount; i++)
-                        {
-                            var fileName = $"\\Backup_{dirInfo.Name}_{sortedList[0].ToString(DATETIME_PATTERN)}.zip";
-                            _logger.LogInformation($"Deleting {fileName}");
+                            for (int i = 0; i < sortedList.Count - _config.MaximumBackupFilePerApplication; i++)
+                            {
+                                var fileName = $"\\Backup_{dirInfo.Name}_{sortedList[0].ToString(DATETIME_PATTERN)}.zip";
+                                _logger.LogInformation($"Deleting {fileName}");
 
-                            File.Delete(_config.BackupPath + fileName);
+                                File.Delete(_config.BackUpPath + fileName);
+                            }
                         }
                     }
                 }

@@ -1,33 +1,29 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
-<Config>
-	<BackupConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-		<FileCount>3</FileCount>
-		<Directories>
-			<string>C:\Steam</string>
-			<string>C:\minecraft</string>
-			<string>C:\Users\admin\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup</string>
-			<string>C:\Users\admin\AppData\LocalLow\IronGate\Valheim</string>
-			<string>C:\Users\admin\AppData\LocalLow\Endnight\SonsOfTheForestDS</string>
-			<!--enshrouded is included in game files-->
-		</Directories>
-		<BackupPath>\\10.0.0.14\NetworkStorage\ServerBackup</BackupPath>
-	</BackupConfig>
-	<StartStopConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-		<StartUpFolder>%AppData%\Microsoft\Windows\Start Menu\Programs\Startup\</StartUpFolder>
-		<Services>
-			<Service Name="enshrouded_server">
-				<Name>enshrouded_server</Name>
-			</Service>
-			<Service>
-				<Name>SonsOfTheForestDS</Name>
-			</Service>
-			<Service>
-				<Name>valheim_server</Name>
-			</Service>
-			<Service>
-				<Name>minecraft</Name>
-				<CheckTitle>java</CheckTitle>
-			</Service>
-		</Services>
-	</StartStopConfig>
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Name="Default">
+	<MaximumBackupFilePerApplication>3</MaximumBackupFilePerApplication>
+	<BackUpPath>\\10.0.0.14\NetworkStorage\ServerBackup</BackUpPath>
+	<Applications>
+		<Application Name="enshrouded_server">
+			<Directories>
+				<Folder>C:\Users\admin\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup</Folder>
+					<Folder>C:\Steam</Folder>
+			</Directories>
+		</Application>
+		<Application Name="SonsOfTheForestDS">
+			<Directories>
+				<Folder>C:\Users\admin\AppData\LocalLow\Endnight\SonsOfTheForestDS</Folder>
+			</Directories>
+		</Application>
+		<Application Name="valheim_server">
+			<Directories>
+				<Folder>C:\Users\admin\AppData\LocalLow\IronGate\Valheim</Folder>
+			</Directories>
+		</Application>
+		<Application Name="minecraft" CheckTitle="java">
+			<Directories>
+				<Folder>C:\minecraft</Folder>
+			</Directories>
+		</Application>
+	</Applications>
+	<StartUpFolder>%AppData%\Microsoft\Windows\Start Menu\Programs\Startup\</StartUpFolder>
 </Config>

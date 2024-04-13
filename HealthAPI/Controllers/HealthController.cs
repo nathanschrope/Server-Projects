@@ -1,4 +1,5 @@
 ﻿using CommonLibrary;
+using CommonLibrary.StartStop;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 
@@ -9,22 +10,16 @@ namespace HealthAPI.Controllers
     public class HealthController : Controller
     {
         private readonly ILogger<HealthController> _logger;
-        private List<Service> _services;
+        private IConfig<IApplication> _config;
         private JsonSerializerOptions _serializerOptions = new JsonSerializerOptions
         {
             WriteIndented = true,
         };
 
-        public HealthController(ILogger<HealthController> logger)
+        public HealthController(ILogger<HealthController> logger, IConfig<IApplication> config)
         {
             _logger = logger;
-            _services =
-            [
-                new Service("enshrouded_server"),
-                new Service("SonsOfTheForestDS"),
-                new Service("valheim_server"),
-                new Service("minecraft") { CheckTitle = "java" },
-            ];
+            _config = config;
         }
 
         [HttpGet]
@@ -34,7 +29,7 @@ namespace HealthAPI.Controllers
             HealthResponse response = new HealthResponse();
             ApplicationChecker applicationChecker = new ApplicationChecker();
 
-            foreach (var app in _services)
+            foreach (var app in _config.Applications)
             {
                 _logger.LogInformation($"Finding {app.Name} {app.CheckTitle} to check health");
                 if (applicationChecker.IsApplicationRunningByName(app.Name))

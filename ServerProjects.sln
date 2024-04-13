@@ -13,9 +13,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HealthAPI", "HealthAPI\Heal
 		{A7831BDF-7D99-4EF3-9A47-226D82123818} = {A7831BDF-7D99-4EF3-9A47-226D82123818}
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommonLIbrary", "CommonLIbrary\CommonLIbrary.csproj", "{A7831BDF-7D99-4EF3-9A47-226D82123818}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommonLibrary", "CommonLIbrary\CommonLibrary.csproj", "{A7831BDF-7D99-4EF3-9A47-226D82123818}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiscordBotHealthUpdate", "DiscordBotHealthUpdate\DiscordBotHealthUpdate.csproj", "{DD7D15F1-9336-4950-9722-BCB46633AE28}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DiscordBotHealthUpdate", "DiscordBotHealthUpdate\DiscordBotHealthUpdate.csproj", "{DD7D15F1-9336-4950-9722-BCB46633AE28}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
