@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Name="Default">
+	<MaximumBackupFilePerApplication>3</MaximumBackupFilePerApplication>
+	<BackUpPath>\\10.0.0.14\NetworkStorage\ServerBackup</BackUpPath>
+	<Applications>
+		<Application Name="enshrouded_server">
+			<Directories>
+				<Folder>C:\Users\admin\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup</Folder>
+					<Folder>C:\Steam</Folder>
+			</Directories>
+		</Application>
+		<Application Name="SonsOfTheForestDS">
+			<Directories>
+				<Folder>C:\Users\admin\AppData\LocalLow\Endnight\SonsOfTheForestDS</Folder>
+			</Directories>
+		</Application>
+		<Application Name="valheim_server">
+			<Directories>
+				<Folder>C:\Users\admin\AppData\LocalLow\IronGate\Valheim</Folder>
+			</Directories>
+		</Application>
+		<Application Name="minecraft" CheckTitle="java">
+			<Directories>
+				<Folder>C:\minecraft</Folder>
+			</Directories>
+		</Application>
+	</Applications>
+	<StartUpFolder>%AppData%\Microsoft\Windows\Start Menu\Programs\Startup\</StartUpFolder>
+</Config>

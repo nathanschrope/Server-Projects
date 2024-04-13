@@ -2,9 +2,9 @@ using System.Xml.Serialization;
 
 CommonLibrary.XML.Config config = new();
 
-if (args.Length > 1)
+if (args.Length == 0)
     throw new ArgumentException("Invalid number of Arguments");
-else if (args.Length == 1)
+else
 {
     using (var reader = new StreamReader(args[0]))
     {
