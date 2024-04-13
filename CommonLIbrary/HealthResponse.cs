@@ -3,11 +3,11 @@
     public class HealthResponse
     {
         public string Status { get; set; } = "healthy";
-        public List<ApplicationStatus> StatusList { get; set; }
+        public HashSet<ApplicationStatus> StatusList { get; set; }
 
         public HealthResponse()
         {
-            StatusList = new List<ApplicationStatus>();
+            StatusList = new HashSet<ApplicationStatus>();
         }
     }
 

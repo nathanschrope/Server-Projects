@@ -41,6 +41,7 @@ namespace DiscordBotHealthUpdate
             while (true)
             {
                 var messages = await GetHealthAsync();
+
                 if (messages.Count != 0)
                 {
                     foreach (var guild in _client.Guilds)
@@ -100,26 +101,10 @@ namespace DiscordBotHealthUpdate
                     }
                     else
                     {
-                        //do comparison
-                        List<string> checkedApps = jsonObject.StatusList.Select(x => x.Name).ToList();
-                        foreach (var app in _serverStatus.StatusList)
+                        var differences = jsonObject.StatusList.Except(jsonObject.StatusList);
+                        foreach (var dif in differences)
                         {
-                            var returnedApp = jsonObject.StatusList.Where(x => x.Name.Equals(app.Name, StringComparison.OrdinalIgnoreCase));
-                            checkedApps.Remove(app.Name);
-                            if (returnedApp.Any() && !returnedApp.First().Status.Equals(app.Status, StringComparison.OrdinalIgnoreCase))
-                            {
-                                messages.Add($"{returnedApp.First().Name} is {returnedApp.First().Status}");
-                            }
-                            else if (!returnedApp.Any() && !app.Status.Equals("healthy", StringComparison.OrdinalIgnoreCase))
-                            {
-                                messages.Add($"{app.Name} is down");
-                            }
-                        }
-
-                        foreach (var app in checkedApps)
-                        {
-                            var status = jsonObject.StatusList.Where(x => x.Name.Equals(app, StringComparison.OrdinalIgnoreCase)).First().Status;
-                            messages.Add($"{app} is {status}");
+                            messages.Add($"{dif.Name} is {dif.Status}");
                         }
 
                         _serverStatus.StatusList = jsonObject.StatusList;

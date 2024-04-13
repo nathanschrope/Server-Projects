@@ -20,17 +20,6 @@ namespace Backup
         {
             do
             {
-                //setup wait
-                var now = DateTime.UtcNow;
-                var nextBackupTime = new DateTime(now.Year, now.Month, now.Day, 8, 0, 0);
-                if (nextBackupTime.CompareTo(now) <= 0)
-                {//in past
-                    nextBackupTime = nextBackupTime.AddDays(1);
-                }
-
-                _logger.LogInformation($"Next Backup time: {nextBackupTime}");
-
-                await Task.Delay(new TimeSpan(nextBackupTime.Ticks - now.Ticks));
 
                 _logger.LogInformation($"Stopping services at {DateTime.UtcNow}");
                 await _startAndStopService.StopServicesAsync().ConfigureAwait(false);
@@ -43,6 +32,18 @@ namespace Backup
 
                 _logger.LogInformation($"Starting cleanup at {DateTime.UtcNow}");
                 _backupService.Cleanup();
+
+                //setup wait
+                var now = DateTime.UtcNow;
+                var nextBackupTime = new DateTime(now.Year, now.Month, now.Day, 8, 0, 0);
+                if (nextBackupTime.CompareTo(now) <= 0)
+                {//in past
+                    nextBackupTime = nextBackupTime.AddDays(1);
+                }
+
+                _logger.LogInformation($"Next Backup time: {nextBackupTime}");
+
+                await Task.Delay(new TimeSpan(nextBackupTime.Ticks - now.Ticks));
             }
             while (!stoppingToken.IsCancellationRequested);
         }
