@@ -8,8 +8,8 @@ namespace Backup.StartStop
         private readonly ILogger _logger;
         private readonly IConfig<IApplication> _config;
         private readonly Dictionary<string, bool> _running;
-        public StartAndStopService(ILogger<StartAndStopService> logger, IConfig<IApplication> config) 
-        { 
+        public StartAndStopService(ILogger<StartAndStopService> logger, IConfig<IApplication> config)
+        {
             _logger = logger;
             _config = config;
             _running = [];
@@ -26,63 +26,60 @@ namespace Backup.StartStop
             }
         }
 
-        public async Task StopServicesAsync()
+        public async Task StopServicesAsync(IApplication app)
         {
             var tasks = new List<Task>();
-            foreach (var service in _config.Applications)
+
+            try
             {
-                try
+                var processes = Process.GetProcessesByName(app.Name);
+                _logger.LogInformation($"1. {app.Name} found {processes.Length} Applications");
+
+                if (processes.Length != 1 && !String.IsNullOrEmpty(app.CheckTitle))
                 {
-                    var processes = Process.GetProcessesByName(service.Name);
-                    _logger.LogInformation($"1. {service.Name} found {processes.Length} Applications");
-
-                    if (processes.Length != 1 && !String.IsNullOrEmpty(service.CheckTitle))
-                    {
-                        processes = Process.GetProcessesByName(service.CheckTitle);
-                        _logger.LogInformation($"2. {service.Name} found {processes.Length} Applications");
-                        processes = processes.Where(x => x.MainWindowTitle.Equals(service.Name, StringComparison.OrdinalIgnoreCase)).ToArray();
-                    }
-
-
-                    if (processes.Length == 1)
-                    {
-                        var process = processes[0];
-
-                        var wasClosed = process.CloseMainWindow();
-                        _logger.LogInformation($"{service.Name} closing: {wasClosed}");
-
-                        if (wasClosed)
-                        {
-                            _running.Add(service.Name, true);
-                            tasks.Add(processes[0].WaitForExitAsync());
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError(e, $"{service} FAILED TO STOP");
+                    processes = Process.GetProcessesByName(app.CheckTitle);
+                    _logger.LogInformation($"2. {app.Name} found {processes.Length} Applications");
+                    processes = processes.Where(x => x.MainWindowTitle.Equals(app.Name, StringComparison.OrdinalIgnoreCase)).ToArray();
                 }
 
+
+                if (processes.Length == 1)
+                {
+                    var process = processes[0];
+
+                    var wasClosed = process.CloseMainWindow();
+                    _logger.LogInformation($"{app.Name} closing: {wasClosed}");
+
+                    if (wasClosed)
+                    {
+                        _running.Add(app.Name, true);
+                        tasks.Add(processes[0].WaitForExitAsync());
+                    }
+                }
             }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"{app} FAILED TO STOP");
+            }
+
 
             await Task.WhenAll(tasks).ConfigureAwait(false);
         }
 
-        public void StartServices() 
+        public void StartServices(IApplication app)
         {
-            foreach (var service in _running)
+
+            if (app != null && _running.GetValueOrDefault(app.Name, false))
             {
-                if (service.Value)
+                Process.Start(new ProcessStartInfo()
                 {
-                    Process.Start(new ProcessStartInfo()
-                    {
-                        FileName = _config.StartUpFolder + service.Key + ".bat",
-                        UseShellExecute = true,
-                    });
-                }
+                    FileName = _config.StartUpFolder + app.Name + ".bat",
+                    UseShellExecute = true,
+                });
+                _running.Remove(app.Name);
             }
 
-            _running.Clear();
+
         }
     }
 }

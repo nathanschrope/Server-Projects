@@ -19,6 +19,7 @@ else if (args.Length == 1)
 
 
 var builder = Host.CreateApplicationBuilder(args);
+builder.Services.AddSingleton(typeof(IConfig), config);
 builder.Services.AddSingleton(typeof(CommonLibrary.StartStop.IConfig<CommonLibrary.StartStop.IApplication>), config);
 builder.Services.AddSingleton(typeof(CommonLibrary.Backup.IConfig<CommonLibrary.Backup.IApplication>), config);
 builder.Services.AddSingleton<IBackupService, BackupService>();

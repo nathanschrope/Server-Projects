@@ -1,37 +1,34 @@
 using Backup.StartStop;
+using CommonLibrary.XML;
 
 namespace Backup
 {
     public class Worker : BackgroundService
     {
         private readonly ILogger<Worker> _logger;
+        private IConfig _config;
         private IBackupService _backupService;
         private IStartStopService _startAndStopService;
 
-
-        public Worker(ILogger<Worker> logger, IBackupService backupService, IStartStopService startAndStopService)
+        public Worker(ILogger<Worker> logger, IConfig config, IBackupService backupService, IStartStopService startAndStopService)
         {
             _logger = logger;
             _backupService = backupService;
             _startAndStopService = startAndStopService;
+            _config = config;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             do
             {
+                List<Task> tasks = new List<Task>();
+                foreach (var app in _config.Applications)
+                {
+                    tasks.Add(StopBackupStart(app));
+                }
 
-                _logger.LogInformation($"Stopping services at {DateTime.UtcNow}");
-                await _startAndStopService.StopServicesAsync().ConfigureAwait(false);
-
-                _logger.LogInformation($"Starting Backup at {DateTime.UtcNow}");
-                _backupService.Backup();
-
-                _logger.LogInformation($"Starting services at {DateTime.UtcNow}");
-                _startAndStopService.StartServices();
-
-                _logger.LogInformation($"Starting cleanup at {DateTime.UtcNow}");
-                _backupService.Cleanup();
+                await Task.WhenAll(tasks);
 
                 //setup wait
                 var now = DateTime.UtcNow;
@@ -46,6 +43,21 @@ namespace Backup
                 await Task.Delay(new TimeSpan(nextBackupTime.Ticks - now.Ticks));
             }
             while (!stoppingToken.IsCancellationRequested);
+        }
+
+        public async Task StopBackupStart(Application app)
+        {
+            _logger.LogInformation($"Stopping {app.Name} at {DateTime.UtcNow}");
+            await _startAndStopService.StopServicesAsync(app).ConfigureAwait(false);
+
+            _logger.LogInformation($"Starting Backup for {app.Name} at {DateTime.UtcNow}");
+            _backupService.Backup(app);
+
+            _logger.LogInformation($"Starting {app.Name} at {DateTime.UtcNow}");
+            _startAndStopService.StartServices(app);
+
+            _logger.LogInformation($"Starting cleanup for {app.Name} at {DateTime.UtcNow}");
+            _backupService.Cleanup(app);
         }
     }
 }

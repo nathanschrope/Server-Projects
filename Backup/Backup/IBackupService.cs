@@ -1,8 +1,10 @@
-﻿namespace Backup
+﻿using CommonLibrary.Backup;
+
+namespace Backup
 {
     public interface IBackupService
     {
-        void Backup();
-        void Cleanup();
+        void Backup(IApplication app);
+        void Cleanup(IApplication app);
     }
 }

@@ -7,7 +7,7 @@ namespace DiscordBotHealthUpdate
 {
     public class HealthReporter
     {
-        private static DiscordSocketClient _client;
+        private static DiscordSocketClient? _client;
         private string _token { get; }
         private static HealthResponse? _serverStatus { get; set; } = null;
 
@@ -24,6 +24,8 @@ namespace DiscordBotHealthUpdate
 
         public async Task Start()
         {
+            if (_client == null)
+                throw new Exception("Client was not started up first.");
             await _client.LoginAsync(TokenType.Bot, _token).ConfigureAwait(false);
             await _client.StartAsync();
 
@@ -35,6 +37,9 @@ namespace DiscordBotHealthUpdate
         // connection and it is now safe to access the cache.
         private static async Task ReadyAsync()
         {
+            if (_client == null)
+                throw new Exception("Client was not started up first.");
+
             Console.WriteLine($"{_client.CurrentUser} is connected!");
 
 

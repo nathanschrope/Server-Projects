@@ -1,8 +1,10 @@
-﻿namespace Backup.StartStop
+﻿using CommonLibrary.StartStop;
+
+namespace Backup.StartStop
 {
     public interface IStartStopService
     {
-        Task StopServicesAsync();
-        void StartServices();
+        Task StopServicesAsync(IApplication app);
+        void StartServices(IApplication app);
     }
 }
