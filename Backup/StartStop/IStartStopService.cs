@@ -4,7 +4,7 @@ namespace Backup.StartStop
 {
     public interface IStartStopService
     {
-        Task StopServicesAsync(IApplication app);
+        Task<bool> StopServicesAsync(IApplication app);
         void StartServices(IApplication app);
     }
 }

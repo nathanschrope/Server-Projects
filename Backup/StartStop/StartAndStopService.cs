@@ -26,7 +26,7 @@ namespace Backup.StartStop
             }
         }
 
-        public async Task StopServicesAsync(IApplication app)
+        public async Task<bool> StopServicesAsync(IApplication app)
         {
             var tasks = new List<Task>();
 
@@ -64,6 +64,8 @@ namespace Backup.StartStop
 
 
             await Task.WhenAll(tasks).ConfigureAwait(false);
+
+            return tasks.Count > 0;
         }
 
         public void StartServices(IApplication app)
