@@ -19,6 +19,12 @@ else if (args.Length == 1)
 
 
 var builder = Host.CreateApplicationBuilder(args);
+builder.Logging.AddSimpleConsole(options =>
+    {
+        options.SingleLine = true;
+        options.TimestampFormat = "yyyy/MM/dd HH:mm:ss";
+        options.IncludeScopes = false;
+    });
 builder.Services.AddSingleton(typeof(IConfig), config);
 builder.Services.AddSingleton(typeof(CommonLibrary.StartStop.IConfig<CommonLibrary.StartStop.IApplication>), config);
 builder.Services.AddSingleton(typeof(CommonLibrary.Backup.IConfig<CommonLibrary.Backup.IApplication>), config);

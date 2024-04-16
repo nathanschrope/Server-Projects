@@ -3,10 +3,10 @@
 	<MaximumBackupFilePerApplication>3</MaximumBackupFilePerApplication>
 	<BackUpPath>\\10.0.0.14\NetworkStorage\ServerBackup</BackUpPath>
 	<Applications>
-		<Application Name="enshrouded_server">
+		<Application Name="enshrouded_server"  AllStart="true">
 			<Directories>
 				<Folder>C:\Users\admin\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup</Folder>
-					<Folder>C:\Steam</Folder>
+				<Folder>C:\Steam</Folder>
 			</Directories>
 		</Application>
 		<Application Name="SonsOfTheForestDS">

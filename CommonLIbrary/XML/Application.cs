@@ -13,5 +13,8 @@ namespace CommonLibrary.XML
 
         [XmlAttribute]
         public string CheckTitle { get; set; } = "";
+
+        [XmlAttribute]
+        public bool AllStart { get; set; } = false;
     }
 }

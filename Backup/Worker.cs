@@ -1,5 +1,6 @@
 using Backup.StartStop;
 using CommonLibrary.XML;
+using System.Threading.Tasks;
 
 namespace Backup
 {
@@ -22,13 +23,32 @@ namespace Backup
         {
             do
             {
-                List<Task> tasks = new List<Task>();
+                int startAfterCount = _config.Applications.Where(x => x.AllStart).Count();
+                int currentStartAfterCount = 0;
+                List<Task> tasks = [];
                 foreach (var app in _config.Applications)
                 {
-                    tasks.Add(StopBackupStart(app));
+                    var task = StopAndBackup(app);
+                    if (app.AllStart)
+                    {
+                        task = task.ContinueWith((x) => { Interlocked.Increment(ref currentStartAfterCount); });
+                    }
+
+                    task = task.ContinueWith((y) =>
+                        {
+                            while (!Interlocked.Equals(currentStartAfterCount, startAfterCount))
+                            {
+                                Task.Delay(60000);
+                            }
+                        }
+                    ).ContinueWith((z) => StartClean(app));
+
+                    tasks.Add(task);
                 }
 
                 await Task.WhenAll(tasks);
+                tasks.Clear();
+                currentStartAfterCount = 0;
 
                 //setup wait
                 var now = DateTime.UtcNow;
@@ -45,19 +65,34 @@ namespace Backup
             while (!stoppingToken.IsCancellationRequested);
         }
 
-        public async Task StopBackupStart(Application app)
+        public async Task StopBackupStartClean(Application app)
+        {
+            await StopAndBackup(app);
+
+            await StartClean(app);
+        }
+
+        public async Task StopAndBackup(Application app)
         {
             _logger.LogInformation($"Stopping {app.Name} at {DateTime.UtcNow}");
             await _startAndStopService.StopServicesAsync(app).ConfigureAwait(false);
 
             _logger.LogInformation($"Starting Backup for {app.Name} at {DateTime.UtcNow}");
             _backupService.Backup(app);
+            _logger.LogInformation($"Finished Backup for {app.Name} at {DateTime.UtcNow}");
+        }
 
+        public Task StartClean(Application app)
+        {
             _logger.LogInformation($"Starting {app.Name} at {DateTime.UtcNow}");
             _startAndStopService.StartServices(app);
 
             _logger.LogInformation($"Starting cleanup for {app.Name} at {DateTime.UtcNow}");
             _backupService.Cleanup(app);
+
+            _logger.LogInformation($"Finished cleanup for {app.Name} at {DateTime.UtcNow}");
+
+            return Task.CompletedTask;
         }
     }
 }
