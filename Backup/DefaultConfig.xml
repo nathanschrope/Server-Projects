@@ -3,20 +3,21 @@
 	<MaximumBackupFilePerApplication>3</MaximumBackupFilePerApplication>
 	<BackUpPath>\\10.0.0.14\NetworkStorage\ServerBackup</BackUpPath>
 	<Applications>
-		<Application Name="enshrouded_server"  AllStart="true">
+		<Application Name="enshrouded_server">
 			<Directories>
-				<Folder>C:\Users\admin\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup</Folder>
-				<Folder>C:\Steam</Folder>
+				<Folder>C:\Steam\enshrouded</Folder>
 			</Directories>
 		</Application>
 		<Application Name="SonsOfTheForestDS">
 			<Directories>
 				<Folder>C:\Users\admin\AppData\LocalLow\Endnight\SonsOfTheForestDS</Folder>
+				<Folder>C:\Steam\sotf</Folder>
 			</Directories>
 		</Application>
 		<Application Name="valheim_server">
 			<Directories>
 				<Folder>C:\Users\admin\AppData\LocalLow\IronGate\Valheim</Folder>
+				<Folder>C:\Steam\valheim</Folder>
 			</Directories>
 		</Application>
 		<Application Name="minecraft" CheckTitle="java">

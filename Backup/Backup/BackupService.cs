@@ -24,6 +24,22 @@ namespace Backup
             }
         }
 
+        public void Backup(string path)
+        {
+            try
+            {
+                _logger.LogInformation($"Getting Backup of {path} to {_config.BackUpPath}");
+                var dirInfo = new DirectoryInfo(path);
+                var fileName = "Backup_" + dirInfo.Name + "_" + DateTime.Now.ToString(DATETIME_PATTERN) + ".zip";
+                if (!File.Exists(_config.BackUpPath + "\\" + fileName))
+                    ZipFile.CreateFromDirectory(path, _config.BackUpPath + "\\" + fileName);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"ZIP FAILED {path}");
+            }
+        }
+
         public void Backup(IApplication app)
         {
             if (!Directory.Exists(_config.BackUpPath))
@@ -37,11 +53,14 @@ namespace Backup
                 {
                     try
                     {
-                        _logger.LogInformation($"Getting Backup of {dir} to {_config.BackUpPath}");
+                        var backUpDir = _config.BackUpPath + "\\" + app.Name + "\\";
+                        if(!Directory.Exists(backUpDir))
+                            Directory.CreateDirectory(backUpDir);
+                        _logger.LogInformation($"Getting Backup of {dir} to {backUpDir}");
                         var dirInfo = new DirectoryInfo(dir);
                         var fileName = "Backup_" + dirInfo.Name + "_" + DateTime.Now.ToString(DATETIME_PATTERN) + ".zip";
-                        if (!File.Exists(_config.BackUpPath + "\\" + fileName))
-                            ZipFile.CreateFromDirectory(dir, _config.BackUpPath + "\\" + fileName);
+                        if (!File.Exists(backUpDir + fileName))
+                            ZipFile.CreateFromDirectory(dir, backUpDir + fileName);
                     }
                     catch (Exception e)
                     {
@@ -66,7 +85,7 @@ namespace Backup
                 if (Directory.Exists(dir))
                 {
                     var dirInfo = new DirectoryInfo(dir);
-                    var files = Directory.GetFiles(_config.BackUpPath, "Backup_" + dirInfo.Name + "_*.zip");
+                    var files = Directory.GetFiles(_config.BackUpPath + "\\" + app.Name, "Backup_" + dirInfo.Name + "_*.zip");
                     if (files.Length > _config.MaximumBackupFilePerApplication) //some have to go
                     {
                         var sortedList = new List<DateTime>();

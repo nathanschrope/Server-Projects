@@ -22,44 +22,16 @@ namespace Backup
         {
             do
             {
-                int startAfterCount = _config.Applications.Where(x => x.AllStart).Count();
-                int currentStartAfterCount = 0;
                 List<Task> tasks = [];
+                _backupService.Backup(_config.StartUpFolder);
                 foreach (var app in _config.Applications)
                 {
-                    var task = StopAndBackup(app);
-                    if (app.AllStart)
-                    {
-                        task = task.ContinueWith((x) =>
-                            {
-                                Interlocked.Increment(ref currentStartAfterCount);
-                                return x.Result;
-                            });
-                    }
-
-                    task = task.ContinueWith(async y =>
-                    {
-                        while (!Interlocked.Equals(currentStartAfterCount, startAfterCount))
-                        {
-                            await Task.Delay(60000);
-                        }
-                        return y.Result;
-                    }).Unwrap()
-                    .ContinueWith((z) => 
-                    {
-                        if (z.Result)
-                        {
-                            StartClean(app);
-                        }
-                        return z.Result;
-                    });
-
+                    var task = Task.Run(() => StopBackupStartClean(app));
                     tasks.Add(task);
                 }
 
                 await Task.WhenAll(tasks);
                 tasks.Clear();
-                currentStartAfterCount = 0;
 
                 //setup wait
                 var now = DateTime.UtcNow;
@@ -74,6 +46,13 @@ namespace Backup
                 await Task.Delay(new TimeSpan(nextBackupTime.Ticks - now.Ticks));
             }
             while (!stoppingToken.IsCancellationRequested);
+        }
+
+        public async Task<bool> StopBackupStartClean(Application app)
+        {
+            var result = await StopAndBackup(app);
+            await StartClean(app);
+            return result;
         }
 
         public async Task<bool> StopAndBackup(Application app)
