@@ -84,8 +84,9 @@ namespace Backup
             {
                 if (Directory.Exists(dir))
                 {
+                    var backUpDir = _config.BackUpPath + "\\" + app.Name + "\\";
                     var dirInfo = new DirectoryInfo(dir);
-                    var files = Directory.GetFiles(_config.BackUpPath + "\\" + app.Name, "Backup_" + dirInfo.Name + "_*.zip");
+                    var files = Directory.GetFiles(backUpDir, "Backup_" + dirInfo.Name + "_*.zip");
                     if (files.Length > _config.MaximumBackupFilePerApplication) //some have to go
                     {
                         var sortedList = new List<DateTime>();
@@ -112,7 +113,7 @@ namespace Backup
                             var fileName = $"\\Backup_{dirInfo.Name}_{sortedList[0].ToString(DATETIME_PATTERN)}.zip";
                             _logger.LogInformation($"Deleting {fileName}");
 
-                            File.Delete(_config.BackUpPath + fileName);
+                            File.Delete(backUpDir + fileName);
                         }
                     }
                 }
