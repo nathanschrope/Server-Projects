@@ -56,6 +56,8 @@ namespace Backup.StartStop
                         tasks.Add(processes[0].WaitForExitAsync());
                     }
                 }
+
+                await Task.WhenAll(tasks).ConfigureAwait(false);
             }
             catch (Exception e)
             {

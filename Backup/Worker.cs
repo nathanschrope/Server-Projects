@@ -20,39 +20,29 @@ namespace Backup
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            do
+
+            List<Task> tasks = [];
+            try
             {
-                //setup wait
-                var now = DateTime.UtcNow;
-                var nextBackupTime = new DateTime(now.Year, now.Month, now.Day, 8, 0, 0);
-                if (nextBackupTime.CompareTo(now) <= 0)
-                {//in past
-                    nextBackupTime = nextBackupTime.AddDays(1);
-                }
-
-                _logger.LogInformation($"Next Backup time: {nextBackupTime}");
-
-                await Task.Delay(new TimeSpan(nextBackupTime.Ticks - now.Ticks));
-
-                List<Task> tasks = [];
                 _backupService.Backup(_config.StartUpFolder);
-                foreach (var app in _config.Applications)
-                {
-                    try
-                    {
-                        var task = Task.Run(() => StopBackupStartClean(app));
-                        tasks.Add(task);
-                    }catch (Exception e)
-                    {
-                        _logger.LogError($"{app.Name} Failed to start process.");
-                        _logger.LogError(e, e.Message);
-                    }
-                }
-
-                await Task.WhenAll(tasks);
-                tasks.Clear();
             }
-            while (!stoppingToken.IsCancellationRequested);
+            catch (Exception e)
+            {
+                _logger.LogError(e, "StartUpFolder Backup Failed");
+            }
+
+            foreach (var app in _config.Applications)
+            {
+                var task = StopBackupStartClean(app);
+                tasks.Add(task);
+            }
+
+            await Task.WhenAll(tasks);
+            tasks.Clear();
+
+            _logger.LogInformation("DONE, WORKER CLOSING");
+            Environment.Exit(0);
+            return;
         }
 
         public async Task<bool> StopBackupStartClean(Application app)
@@ -64,27 +54,45 @@ namespace Backup
 
         public async Task<bool> StopAndBackup(Application app)
         {
-            _logger.LogInformation($"Stopping {app.Name} at {DateTime.UtcNow}");
-            var stopped = await _startAndStopService.StopServicesAsync(app).ConfigureAwait(false);
+            try
+            {
+                _logger.LogInformation($"Stopping {app.Name} at {DateTime.UtcNow}");
+                var stopped = await _startAndStopService.StopServicesAsync(app).ConfigureAwait(false);
 
-            _logger.LogInformation($"Starting Backup for {app.Name} at {DateTime.UtcNow}");
-            _backupService.Backup(app);
-            _logger.LogInformation($"Finished Backup for {app.Name} at {DateTime.UtcNow}");
+                _logger.LogInformation($"Starting Backup for {app.Name} at {DateTime.UtcNow}");
+                _backupService.Backup(app);
+                _logger.LogInformation($"Finished Backup for {app.Name} at {DateTime.UtcNow}");
 
-            return stopped;
+                return stopped;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"Failed to Stop/Backup {app.Name}");
+                return false;
+            }
         }
 
         public Task StartClean(Application app)
         {
-            _logger.LogInformation($"Starting {app.Name} at {DateTime.UtcNow}");
-            _startAndStopService.StartServices(app);
+            try
+            {
 
-            _logger.LogInformation($"Starting cleanup for {app.Name} at {DateTime.UtcNow}");
-            _backupService.Cleanup(app);
 
-            _logger.LogInformation($"Finished cleanup for {app.Name} at {DateTime.UtcNow}");
+                _logger.LogInformation($"Starting {app.Name} at {DateTime.UtcNow}");
+                _startAndStopService.StartServices(app);
 
-            return Task.CompletedTask;
+                _logger.LogInformation($"Starting cleanup for {app.Name} at {DateTime.UtcNow}");
+                _backupService.Cleanup(app);
+
+                _logger.LogInformation($"Finished cleanup for {app.Name} at {DateTime.UtcNow}");
+
+                return Task.CompletedTask;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"Failed to Start/Clean {app.Name}");
+                return Task.CompletedTask;
+            }
         }
     }
 }
