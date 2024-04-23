@@ -22,17 +22,6 @@ namespace Backup
         {
             do
             {
-                List<Task> tasks = [];
-                _backupService.Backup(_config.StartUpFolder);
-                foreach (var app in _config.Applications)
-                {
-                    var task = Task.Run(() => StopBackupStartClean(app));
-                    tasks.Add(task);
-                }
-
-                await Task.WhenAll(tasks);
-                tasks.Clear();
-
                 //setup wait
                 var now = DateTime.UtcNow;
                 var nextBackupTime = new DateTime(now.Year, now.Month, now.Day, 8, 0, 0);
@@ -44,6 +33,24 @@ namespace Backup
                 _logger.LogInformation($"Next Backup time: {nextBackupTime}");
 
                 await Task.Delay(new TimeSpan(nextBackupTime.Ticks - now.Ticks));
+
+                List<Task> tasks = [];
+                _backupService.Backup(_config.StartUpFolder);
+                foreach (var app in _config.Applications)
+                {
+                    try
+                    {
+                        var task = Task.Run(() => StopBackupStartClean(app));
+                        tasks.Add(task);
+                    }catch (Exception e)
+                    {
+                        _logger.LogError($"{app.Name} Failed to start process.");
+                        _logger.LogError(e, e.Message);
+                    }
+                }
+
+                await Task.WhenAll(tasks);
+                tasks.Clear();
             }
             while (!stoppingToken.IsCancellationRequested);
         }
