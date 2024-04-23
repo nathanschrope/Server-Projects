@@ -1,5 +1,7 @@
 ﻿using CommonLibrary.StartStop;
+using Microsoft.Win32.TaskScheduler;
 using System.Diagnostics;
+using Task = System.Threading.Tasks.Task;
 
 namespace Backup.StartStop
 {
@@ -72,18 +74,23 @@ namespace Backup.StartStop
 
         public void StartServices(IApplication app)
         {
-
-            if (app != null && _running.GetValueOrDefault(app.Name, false))
+            try
             {
-                Process.Start(new ProcessStartInfo()
+                using (TaskService svc = new TaskService())
                 {
-                    FileName = _config.StartUpFolder + app.Name + ".bat",
-                    UseShellExecute = true,
-                });
-                _running.Remove(app.Name);
+                    var task = svc.FindTask(app.Name);
+                    
+                    if(task != null)
+                    {
+                        task.Run();
+                        _logger.LogInformation($"{app.Name} was started using Scheduled Task");
+                    }
+                        
+                }
+            }catch(Exception e)
+            {
+                _logger.LogError(e, $"TASK NOT FOUND: {app.Name}");
             }
-
-
         }
     }
 }

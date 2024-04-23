@@ -22,14 +22,6 @@ namespace Backup
         {
 
             List<Task> tasks = [];
-            try
-            {
-                _backupService.Backup(_config.StartUpFolder);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "StartUpFolder Backup Failed");
-            }
 
             foreach (var app in _config.Applications)
             {
