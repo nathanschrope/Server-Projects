@@ -109,7 +109,7 @@ namespace DiscordBotHealthUpdate
                         var differences = jsonObject.StatusList.Except(_serverStatus.StatusList, new ApplicationStatusComparer());
                         foreach (var dif in differences)
                         {
-                            messages.Add($"{dif.Name} is {dif.Status}");
+                            messages.Add($"{dif.Name} is {dif.Status} ({dif.NumberOfProcesses})");
                         }
 
                         _serverStatus.StatusList = jsonObject.StatusList;

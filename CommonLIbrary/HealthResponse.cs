@@ -15,6 +15,7 @@
     {
         public string Name { get; set; } = "";
         public string Status { get; set; } = "";
+        public int NumberOfProcesses { get; set; } = 0;
     }
 
     public class ApplicationStatusComparer : IEqualityComparer<ApplicationStatus>
@@ -27,7 +28,7 @@
             if (ReferenceEquals(x, y))
                 return true;
 
-            return x.Name.Equals(y.Name, StringComparison.OrdinalIgnoreCase) && x.Status.Equals(y.Status, StringComparison.OrdinalIgnoreCase);
+            return x.Name.Equals(y.Name, StringComparison.OrdinalIgnoreCase) && x.Status.Equals(y.Status, StringComparison.OrdinalIgnoreCase) && x.NumberOfProcesses.Equals(y.NumberOfProcesses);
         }
 
         public int GetHashCode(ApplicationStatus? obj)

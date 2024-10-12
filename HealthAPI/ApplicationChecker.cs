@@ -11,17 +11,17 @@ namespace HealthAPI
 
         }
 
-        public bool IsApplicationRunningByName(string applicationName)
+        public int IsApplicationRunningByName(string applicationName)
         {
-            return Process.GetProcessesByName(applicationName).Length > 0;
+            return Process.GetProcessesByName(applicationName).Length;
         }
 
-        public bool IsApplicationRunningByTitle(string applicationName, string title)
+        public int IsApplicationRunningByTitle(string applicationName, string title)
         {
             var processes = Process.GetProcessesByName(applicationName);
             if (processes.Length > 0)
                 processes = processes.Where(x => x.MainWindowTitle.Equals(title, StringComparison.OrdinalIgnoreCase)).ToArray();
-            return processes.Length > 0;
+            return processes.Length;
         }
     }
 }

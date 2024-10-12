@@ -32,12 +32,16 @@ namespace HealthAPI.Controllers
             foreach (var app in _config.Applications)
             {
                 _logger.LogInformation($"Finding {app.Name} {app.CheckTitle} to check health");
-                if (applicationChecker.IsApplicationRunningByName(app.Name))
-                    response.StatusList.Add(new ApplicationStatus() { Name = app.Name, Status = "healthy"});
-                else if(!String.IsNullOrEmpty(app.CheckTitle) && applicationChecker.IsApplicationRunningByTitle(app.CheckTitle, app.Name))
-                    response.StatusList.Add(new ApplicationStatus() { Name = app.Name, Status = "healthy" });
+                var foundApps = applicationChecker.IsApplicationRunningByName(app.Name);
+                if (foundApps > 0)
+                    response.StatusList.Add(new ApplicationStatus() { Name = app.Name, Status = "healthy", NumberOfProcesses = foundApps });
                 else
-                    response.StatusList.Add(new ApplicationStatus() { Name = app.Name, Status = "down" });
+                {
+                    if (String.IsNullOrEmpty(app.CheckTitle))
+                        response.StatusList.Add(new ApplicationStatus() { Name = app.Name, Status = "down" });
+                    else
+                        response.StatusList.Add(new ApplicationStatus() { Name = app.Name, Status = "healthy", NumberOfProcesses = foundApps });
+                }
             }
 
             return JsonSerializer.Serialize(response, _serializerOptions);
