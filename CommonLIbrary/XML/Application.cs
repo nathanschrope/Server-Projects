@@ -14,5 +14,7 @@ namespace CommonLibrary.XML
         [XmlAttribute]
         public string CheckTitle { get; set; } = "";
 
+        [XmlAttribute]
+        public int ExpectedProcesses { get; set; } = 1;
     }
 }

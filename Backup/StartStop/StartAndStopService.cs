@@ -37,26 +37,33 @@ namespace Backup.StartStop
                 var processes = Process.GetProcessesByName(app.Name);
                 _logger.LogInformation($"1. {app.Name} found {processes.Length} Applications");
 
-                if (processes.Length != 1 && !String.IsNullOrEmpty(app.CheckTitle))
+                // Check Title of process to confirm we have the right process
+                if (!String.IsNullOrEmpty(app.CheckTitle) && processes.Length != 1)
                 {
                     processes = Process.GetProcessesByName(app.CheckTitle);
                     _logger.LogInformation($"2. {app.Name} found {processes.Length} Applications");
                     processes = processes.Where(x => x.MainWindowTitle.Equals(app.Name, StringComparison.OrdinalIgnoreCase)).ToArray();
                 }
 
-
-                if (processes.Length == 1)
+                // We might expect more than one process, maybe running more than one server?
+                if (app.ExpectedProcesses == processes.Length)
                 {
-                    var process = processes[0];
-
-                    var wasClosed = process.CloseMainWindow();
-                    _logger.LogInformation($"{app.Name} closing: {wasClosed}");
-
-                    if (wasClosed)
+                    foreach(var process in processes)
                     {
-                        _running.Add(app.Name, true);
-                        tasks.Add(processes[0].WaitForExitAsync());
+                        var wasClosed = process.CloseMainWindow();
+                        _logger.LogInformation($"{app.Name} closing: {wasClosed}");
+
+                        if (wasClosed)
+                        {
+                            _running.Add(app.Name, true);
+                            tasks.Add(processes[0].WaitForExitAsync());
+                        }
                     }
+                }
+                else
+                {
+                    //number of processes was different than we expected
+                    _logger.LogWarning($"Number of processes was different than expected. Did not stop server(s) for {app.Name}. Found {processes.Length} instead of {app.ExpectedProcesses}");
                 }
 
                 await Task.WhenAll(tasks).ConfigureAwait(false);
@@ -79,15 +86,16 @@ namespace Backup.StartStop
                 using (TaskService svc = new TaskService())
                 {
                     var task = svc.FindTask(app.Name);
-                    
-                    if(task != null)
+
+                    if (task != null)
                     {
                         task.Run();
                         _logger.LogInformation($"{app.Name} was started using Scheduled Task");
                     }
-                        
+
                 }
-            }catch(Exception e)
+            }
+            catch (Exception e)
             {
                 _logger.LogError(e, $"TASK NOT FOUND: {app.Name}");
             }
