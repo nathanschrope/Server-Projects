@@ -1,6 +1,7 @@
 ﻿using CommonLibrary;
 using CommonLibrary.StartStop;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace HealthAPI.Controllers
@@ -27,14 +28,13 @@ namespace HealthAPI.Controllers
         public string Get()
         {
             HealthResponse response = new HealthResponse();
-            ApplicationChecker applicationChecker = new ApplicationChecker();
 
             foreach (var app in _config.Applications)
             {
                 _logger.LogInformation($"Finding {app.Name} {app.CheckTitle} to check health");
-                var foundApps = applicationChecker.IsApplicationRunningByName(app.Name);
-                if (foundApps == 0 && !String.IsNullOrEmpty(app.CheckTitle))
-                    foundApps = applicationChecker.IsApplicationRunningByTitle(app.Name, app.CheckTitle);
+                int foundApps = Process.GetProcessesByName(app.Name).Length;
+                if (!String.IsNullOrEmpty(app.CheckTitle) && foundApps == 0)
+                    foundApps = Process.GetProcessesByName(app.CheckTitle).Length;
 
                 if (foundApps > 0)
                     response.StatusList.Add(new ApplicationStatus() { Name = app.Name, Status = "healthy", NumberOfProcesses = foundApps });

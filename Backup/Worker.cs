@@ -39,8 +39,8 @@ namespace Backup
 
         public async Task<bool> StopBackupStartClean(Application app)
         {
-            var result = await StopAndBackup(app);
-            await StartClean(app);
+            var result = await StopAndBackup(app).ConfigureAwait(false);
+            await StartClean(app).ConfigureAwait(false);
             return result;
         }
 

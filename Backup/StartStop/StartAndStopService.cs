@@ -49,13 +49,21 @@ namespace Backup.StartStop
 
                 foreach (var process in processes)
                 {
-                    var wasClosed = process.CloseMainWindow();
-                    _logger.LogInformation($"{app.Name} closing: {wasClosed}");
-
-                    if (wasClosed)
+                    try
                     {
-                        tasks.Add(processes[0].WaitForExitAsync());
+                        var wasClosed = process.CloseMainWindow();
+                        _logger.LogInformation($"{app.Name} closing: {wasClosed}");
+
+                        if (wasClosed)
+                        {
+                            tasks.Add(processes[0].WaitForExitAsync());
+                        }
                     }
+                    catch (Exception e)
+                    {
+                        _logger.LogWarning($"{app.Name} failed to stop process. {e.Message}");
+                    }
+                    
                 }
 
                 await Task.WhenAll(tasks).ConfigureAwait(false);
