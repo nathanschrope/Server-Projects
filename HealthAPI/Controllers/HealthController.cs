@@ -33,15 +33,13 @@ namespace HealthAPI.Controllers
             {
                 _logger.LogInformation($"Finding {app.Name} {app.CheckTitle} to check health");
                 var foundApps = applicationChecker.IsApplicationRunningByName(app.Name);
+                if (foundApps == 0 && !String.IsNullOrEmpty(app.CheckTitle))
+                    foundApps = applicationChecker.IsApplicationRunningByTitle(app.Name, app.CheckTitle);
+
                 if (foundApps > 0)
                     response.StatusList.Add(new ApplicationStatus() { Name = app.Name, Status = "healthy", NumberOfProcesses = foundApps });
                 else
-                {
-                    if (String.IsNullOrEmpty(app.CheckTitle))
-                        response.StatusList.Add(new ApplicationStatus() { Name = app.Name, Status = "down" });
-                    else
-                        response.StatusList.Add(new ApplicationStatus() { Name = app.Name, Status = "healthy", NumberOfProcesses = foundApps });
-                }
+                    response.StatusList.Add(new ApplicationStatus() { Name = app.Name, Status = "down" });
             }
 
             return JsonSerializer.Serialize(response, _serializerOptions);
