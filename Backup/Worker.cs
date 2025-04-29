@@ -29,7 +29,7 @@ namespace Backup
                 tasks.Add(task);
             }
 
-            await Task.WhenAll(tasks);
+            await Task.WhenAll(tasks).ConfigureAwait(false);
             tasks.Clear();
 
             _logger.LogInformation("DONE, WORKER CLOSING");

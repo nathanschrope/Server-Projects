@@ -45,7 +45,7 @@ namespace Backup.StartStop
 
                 // We might expect more than one process, maybe running more than one server?
                 if (app.ExpectedProcesses != processes.Length)
-                    _logger.LogWarning($"Number of processes was different than expected. Did not stop server(s) for {app.Name}. Found {processes.Length} instead of {app.ExpectedProcesses}");
+                    _logger.LogWarning($"Number of processes was different than expected. Found {processes.Length} instead of {app.ExpectedProcesses}");
 
                 foreach (var process in processes)
                 {
@@ -55,9 +55,7 @@ namespace Backup.StartStop
                         _logger.LogInformation($"{app.Name} closing: {wasClosed}");
 
                         if (wasClosed)
-                        {
-                            tasks.Add(processes[0].WaitForExitAsync());
-                        }
+                            tasks.Add(process.WaitForExitAsync());
                     }
                     catch (Exception e)
                     {
