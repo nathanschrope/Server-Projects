@@ -25,8 +25,7 @@ namespace Backup
 
             foreach (var app in _config.Applications)
             {
-                var task = StopBackupStartClean(app);
-                tasks.Add(task);
+                tasks.Add(StopBackupStartClean(app));
             }
 
             await Task.WhenAll(tasks).ConfigureAwait(false);

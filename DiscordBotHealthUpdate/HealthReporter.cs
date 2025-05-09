@@ -92,7 +92,7 @@ namespace DiscordBotHealthUpdate
             List<string> messages = new List<string>();
             HttpClient client = new HttpClient();
 
-            var result = await client.GetAsync("http://192.168.1.73:8069/server/health");
+            var result = await client.GetAsync("http://192.168.1.234:8069/server/health");
             if (result.IsSuccessStatusCode)
             {
                 string responsestr = await result.Content.ReadAsStringAsync();
