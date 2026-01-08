@@ -40,7 +40,6 @@ namespace Backup.StartStop
                 {
                     processes = Process.GetProcessesByName(app.CheckTitle);
                     _logger.LogInformation($"2. {app.Name} found {processes.Length} Applications");
-                    processes = processes.Where(x => x.MainWindowTitle.Equals(app.Name, StringComparison.OrdinalIgnoreCase)).ToArray();
                 }
 
                 // We might expect more than one process, maybe running more than one server?
