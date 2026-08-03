@@ -86,7 +86,7 @@ public class Worker : BackgroundService
 
                     await Task.WhenAll(tasks);
 
-                    nextBackupTime = DateTime.Now.Date + _optionsMonitor.CurrentValue.BackupTime.ToTimeSpan();
+                    nextBackupTime = DateTime.Now.Date.AddDays(1) + _optionsMonitor.CurrentValue.BackupTime.ToTimeSpan();
                 }
                 else
                 {
