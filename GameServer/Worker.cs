@@ -48,11 +48,11 @@ public class Worker : BackgroundService
         DateTime now = DateTime.Now;
         if (TimeOnly.FromDateTime(now) > _optionsMonitor.CurrentValue.BackupTime)
         {
-            nextBackupTime = now.Date + _optionsMonitor.CurrentValue.BackupTime.ToTimeSpan();
+            nextBackupTime = now.Date.AddDays(1) + _optionsMonitor.CurrentValue.BackupTime.ToTimeSpan();
         }
         else
         {
-            nextBackupTime = now.Date.AddDays(1) + _optionsMonitor.CurrentValue.BackupTime.ToTimeSpan();
+            nextBackupTime = now.Date + _optionsMonitor.CurrentValue.BackupTime.ToTimeSpan();
         }
 
         await base.StartAsync(cancellationToken);

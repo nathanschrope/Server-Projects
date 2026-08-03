@@ -5,10 +5,10 @@ var builder = Host.CreateApplicationBuilder(args);
 // Add Windows Service support
 builder.Services.AddWindowsService();
 
-// Configure GameServer options - configuration is automatically watched for changes
-builder.Services.Configure<GameProcessManagerConfiguration>(
-    builder.Configuration.GetSection(GameProcessManagerConfiguration.SectionName)
-);
+builder.Services.AddOptions<GameProcessManagerConfiguration>()
+    .Bind(builder.Configuration.GetRequiredSection(GameProcessManagerConfiguration.SectionName))
+    .ValidateOnStart()
+    .ValidateDataAnnotations();
 
 builder.Services.AddHostedService<Worker>();
 

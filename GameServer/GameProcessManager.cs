@@ -196,6 +196,7 @@ public class GameProcessManager
 
             await StartServerAsync();
 
+            Cleanup();
         }
     }
 
@@ -229,6 +230,23 @@ public class GameProcessManager
         catch (Exception e)
         {
             _logger.LogError(e, $"ZIP FAILED {backupFromDirectory}");
+        }
+    }
+
+    private void Cleanup()
+    {
+        foreach (var backupLocation in _config.BackupLocations)
+        {
+            var backupDirectory = backupLocation.BackupToDirectory;
+            if (Directory.Exists(backupDirectory))
+            {
+                var backupFiles = Directory.GetFiles(backupDirectory, "Backup_" + backupLocation.Name + "_*.zip");
+                Array.Sort(backupFiles);
+                for (int i = 0; i < backupFiles.Length - _config.MaxBackupCount; i++)
+                {
+                    File.Delete(backupFiles[i]);
+                }
+            }
         }
     }
 

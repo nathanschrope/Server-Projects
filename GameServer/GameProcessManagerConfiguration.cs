@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using System.ComponentModel.DataAnnotations;
 
 namespace GameServer;
@@ -5,7 +6,7 @@ namespace GameServer;
 /// <summary>
 /// Configuration options for GameServer that can be updated at runtime.
 /// </summary>
-public sealed record GameProcessManagerConfiguration
+public sealed record GameProcessManagerConfiguration : IValidatableObject
 {
     public const string SectionName = "GameServer";
 
@@ -20,6 +21,17 @@ public sealed record GameProcessManagerConfiguration
     [MinLength(1)]
     public List<ServerInstance> Servers { get; set; } = new();
 
-    [Required]
-    public required TimeOnly BackupTime { get; set; }
+    public TimeOnly BackupTime { get; set; } = TimeOnly.MinValue;
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        List<ValidationResult> results = [];
+
+        foreach (var server in Servers) 
+        {
+            Validator.TryValidateObject(server, new ValidationContext(server), results, true);
+        }
+
+        return results;
+    }
 }

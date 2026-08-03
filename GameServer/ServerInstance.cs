@@ -46,6 +46,8 @@ public sealed record ServerInstance
 
     public List<BackupLocation> BackupLocations { get; set; } = [];
 
+    public int MaxBackupCount { get; set; } = 3;
+
     public string UpdateScript { get; set; } = string.Empty;
 }
 
