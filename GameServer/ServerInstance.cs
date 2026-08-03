@@ -5,7 +5,7 @@ namespace GameServer;
 /// <summary>
 /// Configuration for a single game server instance.
 /// </summary>
-public sealed record ServerInstance
+public sealed record ServerInstance : IValidatableObject
 {
     /// <summary>
     /// Name/identifier for this server.
@@ -49,6 +49,18 @@ public sealed record ServerInstance
     public int MaxBackupCount { get; set; } = 3;
 
     public string UpdateScript { get; set; } = string.Empty;
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        List<ValidationResult> results = [];
+
+        foreach (var backup in BackupLocations)
+        {
+            Validator.TryValidateObject(backup, new ValidationContext(backup), results, true);
+        }
+
+        return results;
+    }
 }
 
 public sealed record BackupLocation
