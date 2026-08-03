@@ -75,8 +75,6 @@ public class Worker : BackgroundService
         {
             try
             {
-                var config = _optionsMonitor.CurrentValue;
-
                 if (DateTime.Now > nextBackupTime)
                 {
                     List<Task> tasks = [];
@@ -88,10 +86,11 @@ public class Worker : BackgroundService
 
                     await Task.WhenAll(tasks);
 
-                    nextBackupTime = DateTime.Now.Date + config.BackupTime.ToTimeSpan();
+                    nextBackupTime = DateTime.Now.Date + _optionsMonitor.CurrentValue.BackupTime.ToTimeSpan();
                 }
                 else
                 {
+                    var config = _optionsMonitor.CurrentValue;
                     List<Task> serverCheckTasks = [];
 
                     foreach (var serverConfig in config.Servers)
@@ -114,7 +113,7 @@ public class Worker : BackgroundService
                     }
                 }
                
-                await Task.Delay(config.WorkerIntervalMs, stoppingToken);
+                await Task.Delay(_optionsMonitor.CurrentValue.WorkerIntervalMs, stoppingToken);
             }
             catch (Exception ex)
             {
