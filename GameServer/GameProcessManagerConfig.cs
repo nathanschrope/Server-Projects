@@ -5,7 +5,7 @@ namespace GameServer;
 /// <summary>
 /// Configuration for a single game server instance.
 /// </summary>
-public sealed record ServerInstance : IValidatableObject
+public sealed record GameProcessManagerConfig : IValidatableObject
 {
     /// <summary>
     /// Name/identifier for this server.

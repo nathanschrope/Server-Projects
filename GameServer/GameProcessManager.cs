@@ -8,8 +8,8 @@ namespace GameServer;
 /// </summary>
 public class GameProcessManager
 {
-    private readonly ILogger<GameProcessManager> _logger;
-    private readonly ServerInstance _config;
+    private readonly ILogger _logger;
+    private readonly GameProcessManagerConfig _config;
     private Process? _serverProcess;
     private readonly object _lockObject = new();
     private const string DATETIME_PATTERN = "yyyyMMdd";
@@ -17,7 +17,7 @@ public class GameProcessManager
     public string ServerName => _config.Name;
     public bool IsRunning => _serverProcess != null && !_serverProcess.HasExited;
 
-    public GameProcessManager(ILogger<GameProcessManager> logger, ServerInstance config)
+    public GameProcessManager(ILogger logger, GameProcessManagerConfig config)
     {
         _logger = logger;
         _config = config;

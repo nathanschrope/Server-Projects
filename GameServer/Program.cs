@@ -5,8 +5,8 @@ var builder = Host.CreateApplicationBuilder(args);
 // Add Windows Service support
 builder.Services.AddWindowsService();
 
-builder.Services.AddOptions<GameProcessManagerConfiguration>()
-    .Bind(builder.Configuration.GetRequiredSection(GameProcessManagerConfiguration.SectionName))
+builder.Services.AddOptions<ServerManagerConfig>()
+    .Bind(builder.Configuration.GetRequiredSection(ServerManagerConfig.SectionName))
     .ValidateOnStart()
     .ValidateDataAnnotations();
 

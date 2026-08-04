@@ -6,7 +6,7 @@ namespace GameServer;
 /// <summary>
 /// Configuration options for GameServer that can be updated at runtime.
 /// </summary>
-public sealed record GameProcessManagerConfiguration : IValidatableObject
+public sealed record ServerManagerConfig : IValidatableObject
 {
     public const string SectionName = "GameServer";
 
@@ -19,7 +19,7 @@ public sealed record GameProcessManagerConfiguration : IValidatableObject
     /// List of game server instances to manage.
     /// </summary>
     [MinLength(1)]
-    public List<ServerInstance> Servers { get; set; } = new();
+    public List<GameProcessManagerConfig> Servers { get; set; } = new();
 
     public TimeOnly BackupTime { get; set; } = TimeOnly.MinValue;
 
