@@ -12,6 +12,8 @@ public class Worker(ILogger<Worker> logger, IServerManager serverManager, IOptio
 
         await serverManager.StartAllAsync();
 
+        nextBackupTime = DateTime.Now.Date.AddDays(1) + optionsMonitor.CurrentValue.BackupTime.ToTimeSpan();
+
         await base.StartAsync(cancellationToken);
     }
 
