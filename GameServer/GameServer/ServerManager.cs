@@ -68,7 +68,7 @@ public class ServerManager(ILogger<ServerManager> logger, ILoggerFactory loggerF
             }
 
             // server is in config, lets start it up
-            var newManager = new GameProcessManager(loggerFactory.CreateLogger(serverConfig.Name), serverConfig);
+            var newManager = new GameProcessManager(loggerFactory.CreateLogger(nameof(GameProcessManager) + "." + serverConfig.Name), serverConfig);
             _serverManagers[serverName] = newManager;
             await newManager.StartServerAsync();
             return;

@@ -7,7 +7,10 @@ using Microsoft.AspNetCore.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Logging.ClearProviders();
+builder.Logging.AddLog4Net("log4net.config", false);
 builder.Services.AddLogging();
+
 
 builder.Services.AddSingleton<IServerManager, ServerManager>();
 
