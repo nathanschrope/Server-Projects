@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace GameServer;
+namespace GameServer.GameServer;
 
 /// <summary>
 /// Configuration for a single game server instance.

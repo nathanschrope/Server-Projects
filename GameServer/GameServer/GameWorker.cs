@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Options;
 
-namespace GameServer;
+namespace GameServer.GameServer;
 
-public class Worker(ILogger<Worker> logger, IServerManager serverManager, IOptionsMonitor<ServerManagerConfig> optionsMonitor) : BackgroundService
+public class GameWorker(ILogger<GameWorker> logger, IServerManager serverManager, IOptionsMonitor<ServerManagerConfig> optionsMonitor) : BackgroundService
 {
     private DateTime nextBackupTime;
 

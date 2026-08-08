@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.IO.Compression;
 
-namespace GameServer;
+namespace GameServer.GameServer;
 
 /// <summary>
 /// Manages a generic game server process - starting, monitoring, and restarting.

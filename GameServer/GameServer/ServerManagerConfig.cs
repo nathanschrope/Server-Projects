@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
 using System.ComponentModel.DataAnnotations;
 
-namespace GameServer;
+namespace GameServer.GameServer;
 
 /// <summary>
 /// Configuration options for GameServer that can be updated at runtime.
