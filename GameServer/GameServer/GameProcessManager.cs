@@ -165,14 +165,18 @@ public class GameProcessManager
                     _logger.LogDebug("[{serverName}] Sending Ctrl+C to process group {pid}", ServerName, processToStop.Id);
                     if (NativeMethods.GenerateConsoleCtrlEvent(NativeMethods.CTRL_C_EVENT, (uint)processToStop.Id))
                     {
-                        if (processToStop.WaitForExit(5000))
+                        using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
                         {
-                            _logger.LogInformation("[{serverName}] Server stopped via Ctrl+C", ServerName);
-                            stopped = true;
-                        }
-                        else
-                        {
-                            _logger.LogWarning("[{serverName}] Server did not stop within 5000ms after Ctrl+C", ServerName);
+                            try
+                            {
+                                await processToStop.WaitForExitAsync(cts.Token);
+                                _logger.LogInformation("[{serverName}] Server stopped via Ctrl+C", ServerName);
+                                stopped = true;
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                _logger.LogWarning("[{serverName}] Server did not stop within 5000ms after Ctrl+C", ServerName);
+                            }
                         }
                     }
                     else
@@ -197,14 +201,18 @@ public class GameProcessManager
                         processToStop.StandardInput.WriteLine("stop");
                         processToStop.StandardInput.Flush();
 
-                        if (processToStop.WaitForExit(5000))
+                        using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
                         {
-                            _logger.LogInformation("[{serverName}] Server stopped via stdin 'stop'", ServerName);
-                            stopped = true;
-                        }
-                        else
-                        {
-                            _logger.LogWarning("[{serverName}] Server did not stop within 5000ms after 'stop' command", ServerName);
+                            try
+                            {
+                                await processToStop.WaitForExitAsync(cts.Token);
+                                _logger.LogInformation("[{serverName}] Server stopped via stdin 'stop'", ServerName);
+                                stopped = true;
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                _logger.LogWarning("[{serverName}] Server did not stop within 5000ms after 'stop' command", ServerName);
+                            }
                         }
                     }
                 }
@@ -215,13 +223,23 @@ public class GameProcessManager
             }
 
             // If still not stopped, wait for the full timeout before killing
-            if (!stopped && !processToStop.WaitForExit(_config.ShutdownTimeoutMs))
+            if (!stopped)
             {
-                _logger.LogWarning("[{serverName}] Server did not stop gracefully within {timeout}ms, killing process",
-                    ServerName,
-                    _config.ShutdownTimeoutMs);
-                processToStop.Kill();
-                processToStop.WaitForExit(0);
+                using (var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(_config.ShutdownTimeoutMs)))
+                {
+                    try
+                    {
+                        await processToStop.WaitForExitAsync(cts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        _logger.LogWarning("[{serverName}] Server did not stop gracefully within {timeout}ms, killing process",
+                            ServerName,
+                            _config.ShutdownTimeoutMs);
+                        processToStop.Kill();
+                        processToStop.WaitForExit();
+                    }
+                }
             }
 
             _logger.LogInformation("[{serverName}] Server stopped", ServerName);
