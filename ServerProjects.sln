@@ -7,6 +7,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameServer", "GameServer\Ga
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiscordWorker", "DiscordWorker\DiscordWorker.csproj", "{30750380-9480-4E05-B532-8D05BD8AE577}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{B7C59406-EE61-4F5A-920F-18FBA22DBD61}"
+	ProjectSection(SolutionItems) = preProject
+		Upgrade.ps1 = Upgrade.ps1
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

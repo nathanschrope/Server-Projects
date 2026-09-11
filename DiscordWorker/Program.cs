@@ -17,11 +17,6 @@ var builder = Host.CreateDefaultBuilder(args)
         }));
         services.AddSingleton<IHealthChecker, HealthChecker>();
         services.AddHostedService<DiscordWorkerService>();
-
-        services.Configure<HostOptions>(options =>
-        {
-            options.ShutdownTimeout = TimeSpan.FromMinutes(20);
-        });
     })
     .UseWindowsService();
 
