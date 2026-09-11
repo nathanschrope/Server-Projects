@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO.Compression;
+using System.Management;
 using System.Runtime.InteropServices;
 
 namespace GameServer.GameServer;
@@ -157,69 +158,33 @@ public class GameProcessManager
 
             bool stopped = false;
 
-            // Try sending Ctrl+C to the process group on Windows
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            // Try writing "stop" to stdin first (works better when running as a service)
+            try
             {
-                try
+                _logger.LogDebug("[{serverName}] Trying stdin 'stop' command", ServerName);
+                if (processToStop.StandardInput.BaseStream.CanWrite)
                 {
-                    _logger.LogDebug("[{serverName}] Sending Ctrl+C to process group {pid}", ServerName, processToStop.Id);
-                    if (NativeMethods.GenerateConsoleCtrlEvent(NativeMethods.CTRL_C_EVENT, (uint)processToStop.Id))
+                    processToStop.StandardInput.WriteLine("stop");
+                    processToStop.StandardInput.Flush();
+
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
                     {
-                        using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
+                        try
                         {
-                            try
-                            {
-                                await processToStop.WaitForExitAsync(cts.Token);
-                                _logger.LogInformation("[{serverName}] Server stopped via Ctrl+C", ServerName);
-                                stopped = true;
-                            }
-                            catch (OperationCanceledException)
-                            {
-                                _logger.LogWarning("[{serverName}] Server did not stop within 5000ms after Ctrl+C", ServerName);
-                            }
+                            await processToStop.WaitForExitAsync(cts.Token);
+                            _logger.LogInformation("[{serverName}] Server stopped via stdin 'stop'", ServerName);
+                            stopped = true;
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            _logger.LogWarning("[{serverName}] Server did not stop within 5000ms after 'stop' command", ServerName);
                         }
                     }
-                    else
-                    {
-                        _logger.LogWarning("[{serverName}] GenerateConsoleCtrlEvent failed, will try stdin 'stop'", ServerName);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "[{serverName}] Error sending Ctrl+C, will try stdin 'stop'", ServerName);
                 }
             }
-
-            // If Ctrl+C didn't work, try writing "stop" to stdin
-            if (!stopped)
+            catch
             {
-                try
-                {
-                    _logger.LogDebug("[{serverName}] Trying stdin 'stop' command", ServerName);
-                    if (processToStop.StandardInput.BaseStream.CanWrite)
-                    {
-                        processToStop.StandardInput.WriteLine("stop");
-                        processToStop.StandardInput.Flush();
-
-                        using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
-                        {
-                            try
-                            {
-                                await processToStop.WaitForExitAsync(cts.Token);
-                                _logger.LogInformation("[{serverName}] Server stopped via stdin 'stop'", ServerName);
-                                stopped = true;
-                            }
-                            catch (OperationCanceledException)
-                            {
-                                _logger.LogWarning("[{serverName}] Server did not stop within 5000ms after 'stop' command", ServerName);
-                            }
-                        }
-                    }
-                }
-                catch
-                {
-                    _logger.LogWarning("[{serverName}] stdin 'stop' failed, will wait for full timeout", ServerName);
-                }
+                _logger.LogWarning("[{serverName}] stdin 'stop' failed, will try Ctrl+C", ServerName);
             }
 
             // If still not stopped, wait for the full timeout before killing
@@ -229,15 +194,31 @@ public class GameProcessManager
                 {
                     try
                     {
+                        _logger.LogDebug("[{serverName}] Waiting for graceful shutdown timeout {timeout}ms", ServerName, _config.ShutdownTimeoutMs);
                         await processToStop.WaitForExitAsync(cts.Token);
                     }
                     catch (OperationCanceledException)
                     {
-                        _logger.LogWarning("[{serverName}] Server did not stop gracefully within {timeout}ms, killing process",
+                        _logger.LogWarning("[{serverName}] Server did not stop gracefully within {timeout}ms, checking for child processes",
                             ServerName,
                             _config.ShutdownTimeoutMs);
-                        processToStop.Kill();
-                        processToStop.WaitForExit();
+
+                        // Get child processes before killing parent
+                        var childProcesses = GetChildProcesses(processToStop.Id);
+
+                        if (childProcesses.Count > 0)
+                        {
+                            _logger.LogInformation("[{serverName}] Found {count} child process(es), attempting graceful shutdown", ServerName, childProcesses.Count);
+                            await ShutdownChildProcessesGracefully(childProcesses);
+                        }
+
+                        // Kill the parent if still running
+                        if (!processToStop.HasExited)
+                        {
+                            _logger.LogDebug("[{serverName}] Killing parent process (PID: {pid})", ServerName, processToStop.Id);
+                            processToStop.Kill();
+                            processToStop.WaitForExit(5000);
+                        }
                     }
                 }
             }
@@ -259,6 +240,203 @@ public class GameProcessManager
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Gets all child processes of a given parent process.
+    /// </summary>
+    private List<Process> GetChildProcesses(int parentPid)
+    {
+        var childProcesses = new List<Process>();
+        try
+        {
+            foreach (var proc in Process.GetProcesses())
+            {
+                try
+                {
+                    var parentId = GetParentProcessId(proc);
+                    if (parentId == parentPid)
+                    {
+                        childProcesses.Add(proc);
+                    }
+                }
+                catch
+                {
+                    // Ignore access errors
+                }
+            }
+        }
+        catch
+        {
+            // Ignore errors getting process list
+        }
+        return childProcesses;
+    }
+
+    /// <summary>
+    /// Attempts graceful shutdown of child processes.
+    /// </summary>
+    private async Task ShutdownChildProcessesGracefully(List<Process> childProcesses)
+    {
+        var shutdownTasks = new List<Task>();
+
+        foreach (var child in childProcesses)
+        {
+            shutdownTasks.Add(ShutdownSingleProcessGracefully(child));
+        }
+
+        try
+        {
+            // Give children their own timeout to shut down gracefully
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
+            {
+                await Task.WhenAll(
+                    Task.WhenAll(shutdownTasks),
+                    Task.Delay(-1, cts.Token)
+                ).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Timeout reached, force kill any remaining children
+            foreach (var child in childProcesses)
+            {
+                if (!child.HasExited)
+                {
+                    _logger.LogWarning("[{serverName}] Child process (PID: {pid}) did not stop within timeout, force killing",
+                        ServerName, child.Id);
+                    try
+                    {
+                        child.Kill();
+                        child.WaitForExit(5000);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "[{serverName}] Error force killing child process (PID: {pid})", ServerName, child.Id);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            // Cleanup
+            foreach (var child in childProcesses)
+            {
+                child.Dispose();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Attempts graceful shutdown of a single process.
+    /// </summary>
+    private async Task ShutdownSingleProcessGracefully(Process process)
+    {
+        try
+        {
+            _logger.LogDebug("[{serverName}] Attempting graceful shutdown of child process (PID: {pid})", ServerName, process.Id);
+
+            if (process.HasExited)
+                return;
+
+            // Try stdin first
+            try
+            {
+                if (process.StandardInput.BaseStream.CanWrite)
+                {
+                    process.StandardInput.WriteLine("stop");
+                    process.StandardInput.Flush();
+
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3)))
+                    {
+                        try
+                        {
+                            await process.WaitForExitAsync(cts.Token);
+                            _logger.LogInformation("[{serverName}] Child process (PID: {pid}) stopped via stdin", ServerName, process.Id);
+                            return;
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            _logger.LogDebug("[{serverName}] Child process (PID: {pid}) did not respond to stdin", ServerName, process.Id);
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // stdin not available
+            }
+
+            // Try Ctrl+C if running on Windows
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                try
+                {
+                    if (NativeMethods.GenerateConsoleCtrlEvent(NativeMethods.CTRL_C_EVENT, (uint)process.Id))
+                    {
+                        using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3)))
+                        {
+                            try
+                            {
+                                await process.WaitForExitAsync(cts.Token);
+                                _logger.LogInformation("[{serverName}] Child process (PID: {pid}) stopped via Ctrl+C", ServerName, process.Id);
+                                return;
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                _logger.LogDebug("[{serverName}] Child process (PID: {pid}) did not respond to Ctrl+C", ServerName, process.Id);
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // Ctrl+C failed
+                }
+            }
+
+            // Wait for natural exit
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
+            {
+                try
+                {
+                    await process.WaitForExitAsync(cts.Token);
+                    _logger.LogInformation("[{serverName}] Child process (PID: {pid}) exited", ServerName, process.Id);
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogWarning("[{serverName}] Child process (PID: {pid}) still running after all shutdown attempts", ServerName, process.Id);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[{serverName}] Error shutting down child process (PID: {pid})", ServerName, process.Id);
+        }
+    }
+
+    /// <summary>
+    /// Gets the parent process ID using WMI.
+    /// </summary>
+    private int GetParentProcessId(Process process)
+    {
+        try
+        {
+            var query = $"SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {process.Id}";
+            using (var searcher = new System.Management.ManagementObjectSearcher(query))
+            {
+                var results = searcher.Get();
+                foreach (var obj in results)
+                {
+                    return Convert.ToInt32(obj["ParentProcessId"]);
+                }
+            }
+        }
+        catch
+        {
+            // If WMI fails, return -1
+        }
+        return -1;
     }
 
     /// <summary>
