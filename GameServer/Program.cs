@@ -11,6 +11,11 @@ builder.Logging.ClearProviders();
 builder.Logging.AddLog4Net("log4net.config", false);
 builder.Services.AddLogging();
 
+// Configure host options for graceful shutdown
+builder.Services.Configure<HostOptions>(options =>
+{
+    options.ShutdownTimeout = TimeSpan.FromMinutes(20); // Allow 20 minutes for all servers to stop gracefully
+});
 
 builder.Services.AddSingleton<IServerManager, ServerManager>();
 
