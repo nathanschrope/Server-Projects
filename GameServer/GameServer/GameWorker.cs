@@ -22,6 +22,7 @@ public class GameWorker(ILogger<GameWorker> logger, IServerManager serverManager
         logger.LogInformation("GameServer Worker stopping - shutting down all servers");
 
         // First stop all servers gracefully so they receive shutdown while the worker is still running.
+        logger.LogInformation("Calling serverManager.StopAllAsync to stop all servers");
         try
         {
             await serverManager.StopAllAsync();
@@ -33,7 +34,10 @@ public class GameWorker(ILogger<GameWorker> logger, IServerManager serverManager
 
 
         // Then signal the background loop to stop so it doesn't restart servers while we're shutting down.
+        logger.LogInformation("Calling base.StopAsync to signal background loop");
         await base.StopAsync(cancellationToken);
+
+        logger.LogInformation("GameServer Worker stopped");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

@@ -88,11 +88,14 @@ public class ServerManager(ILogger<ServerManager> logger, ILoggerFactory loggerF
 
     public Task StopAllAsync()
     {
+        logger.LogInformation("StopAllAsync called, stopping {count} server(s)", _serverManagers.Count);
         List<Task> tasks = [];
         foreach (var manager in _serverManagers.Values)
         {
+            logger.LogInformation("Adding StopServerAsync task for {serverName}", manager.ServerName);
             tasks.Add(manager.StopServerAsync());
         }
+        logger.LogInformation("Awaiting {count} stop tasks", tasks.Count);
         return Task.WhenAll(tasks);
     }
 
