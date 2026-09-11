@@ -138,6 +138,8 @@ public class GameProcessManager
     /// </summary>
     public async Task StopServerAsync()
     {
+        Process? processToStop = null;
+
         lock (_lockObject)
         {
             if (_serverProcess == null || _serverProcess.HasExited)
@@ -146,51 +148,56 @@ public class GameProcessManager
                 return;
             }
 
-            try
+            processToStop = _serverProcess;
+        }
+
+        try
+        {
+            _logger.LogInformation("[{serverName}] Stopping server (PID: {pid})", ServerName, processToStop.Id);
+
+            bool stopped = false;
+
+            // Try sending Ctrl+C to the process group on Windows
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                _logger.LogInformation("[{serverName}] Stopping server (PID: {pid})", ServerName, _serverProcess.Id);
-
-                bool stopped = false;
-
-                // Try sending Ctrl+C to the process group on Windows
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                try
                 {
-                    try
+                    _logger.LogDebug("[{serverName}] Sending Ctrl+C to process group {pid}", ServerName, processToStop.Id);
+                    if (NativeMethods.GenerateConsoleCtrlEvent(NativeMethods.CTRL_C_EVENT, (uint)processToStop.Id))
                     {
-                        _logger.LogDebug("[{serverName}] Sending Ctrl+C to process group {pid}", ServerName, _serverProcess.Id);
-                        if (NativeMethods.GenerateConsoleCtrlEvent(NativeMethods.CTRL_C_EVENT, (uint)_serverProcess.Id))
+                        if (processToStop.WaitForExit(5000))
                         {
-                            if (_serverProcess.WaitForExit(5000))
-                            {
-                                _logger.LogInformation("[{serverName}] Server stopped via Ctrl+C", ServerName);
-                                stopped = true;
-                            }
-                            else
-                            {
-                                _logger.LogWarning("[{serverName}] Server did not stop within 5000ms after Ctrl+C", ServerName);
-                            }
+                            _logger.LogInformation("[{serverName}] Server stopped via Ctrl+C", ServerName);
+                            stopped = true;
                         }
                         else
                         {
-                            _logger.LogWarning("[{serverName}] GenerateConsoleCtrlEvent failed, will try stdin 'stop'", ServerName);
+                            _logger.LogWarning("[{serverName}] Server did not stop within 5000ms after Ctrl+C", ServerName);
                         }
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        _logger.LogWarning(ex, "[{serverName}] Error sending Ctrl+C, will try stdin 'stop'", ServerName);
+                        _logger.LogWarning("[{serverName}] GenerateConsoleCtrlEvent failed, will try stdin 'stop'", ServerName);
                     }
                 }
-
-                // If Ctrl+C didn't work, try writing "stop" to stdin
-                if (!stopped)
+                catch (Exception ex)
                 {
-                    try
-                    {
-                        _logger.LogDebug("[{serverName}] Trying stdin 'stop' command", ServerName);
-                        _serverProcess.StandardInput.WriteLine("stop");
-                        _serverProcess.StandardInput.Flush();
+                    _logger.LogWarning(ex, "[{serverName}] Error sending Ctrl+C, will try stdin 'stop'", ServerName);
+                }
+            }
 
-                        if (_serverProcess.WaitForExit(5000))
+            // If Ctrl+C didn't work, try writing "stop" to stdin
+            if (!stopped)
+            {
+                try
+                {
+                    _logger.LogDebug("[{serverName}] Trying stdin 'stop' command", ServerName);
+                    if (processToStop.StandardInput.BaseStream.CanWrite)
+                    {
+                        processToStop.StandardInput.WriteLine("stop");
+                        processToStop.StandardInput.Flush();
+
+                        if (processToStop.WaitForExit(5000))
                         {
                             _logger.LogInformation("[{serverName}] Server stopped via stdin 'stop'", ServerName);
                             stopped = true;
@@ -200,32 +207,38 @@ public class GameProcessManager
                             _logger.LogWarning("[{serverName}] Server did not stop within 5000ms after 'stop' command", ServerName);
                         }
                     }
-                    catch
-                    {
-                        _logger.LogWarning("[{serverName}] stdin 'stop' failed, will wait for full timeout", ServerName);
-                    }
                 }
-
-                // If still not stopped, wait for the full timeout before killing
-                if (!stopped && !_serverProcess.WaitForExit(_config.ShutdownTimeoutMs))
+                catch
                 {
-                    _logger.LogWarning("[{serverName}] Server did not stop gracefully within {timeout}ms, killing process",
-                        ServerName,
-                        _config.ShutdownTimeoutMs);
-                    _serverProcess.Kill();
-                    _serverProcess.WaitForExit(0);
+                    _logger.LogWarning("[{serverName}] stdin 'stop' failed, will wait for full timeout", ServerName);
                 }
+            }
 
-                _logger.LogInformation("[{serverName}] Server stopped", ServerName);
-            }
-            catch (Exception ex)
+            // If still not stopped, wait for the full timeout before killing
+            if (!stopped && !processToStop.WaitForExit(_config.ShutdownTimeoutMs))
             {
-                _logger.LogError(ex, "[{serverName}] Error stopping server", ServerName);
+                _logger.LogWarning("[{serverName}] Server did not stop gracefully within {timeout}ms, killing process",
+                    ServerName,
+                    _config.ShutdownTimeoutMs);
+                processToStop.Kill();
+                processToStop.WaitForExit(0);
             }
-            finally
+
+            _logger.LogInformation("[{serverName}] Server stopped", ServerName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[{serverName}] Error stopping server", ServerName);
+        }
+        finally
+        {
+            lock (_lockObject)
             {
-                _serverProcess?.Dispose();
-                _serverProcess = null;
+                if (_serverProcess == processToStop)
+                {
+                    _serverProcess?.Dispose();
+                    _serverProcess = null;
+                }
             }
         }
     }
