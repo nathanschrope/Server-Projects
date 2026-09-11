@@ -287,43 +287,37 @@ public class GameProcessManager
 
         try
         {
-            // Give children their own timeout to shut down gracefully
-            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
-            {
-                await Task.WhenAny(
-                    Task.WhenAll(shutdownTasks),
-                    Task.Delay(-1, cts.Token)
-                ).ConfigureAwait(false);
-            }
+            // Wait for all children to complete their shutdown attempts (each has its own timeout)
+            await Task.WhenAll(shutdownTasks).ConfigureAwait(false);
         }
-        catch (OperationCanceledException)
+        catch (Exception ex)
         {
-            // Timeout reached, force kill any remaining children
-            foreach (var child in childProcesses)
+            _logger.LogError(ex, "[{serverName}] Error during child process shutdown", ServerName);
+        }
+
+        // Force kill any remaining children
+        foreach (var child in childProcesses)
+        {
+            if (!child.HasExited)
             {
-                if (!child.HasExited)
+                _logger.LogWarning("[{serverName}] Child process (PID: {pid}) did not stop, force killing",
+                    ServerName, child.Id);
+                try
                 {
-                    _logger.LogWarning("[{serverName}] Child process (PID: {pid}) did not stop within timeout, force killing",
-                        ServerName, child.Id);
-                    try
-                    {
-                        child.Kill();
-                        child.WaitForExit(5000);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "[{serverName}] Error force killing child process (PID: {pid})", ServerName, child.Id);
-                    }
+                    child.Kill();
+                    child.WaitForExit(5000);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[{serverName}] Error force killing child process (PID: {pid})", ServerName, child.Id);
                 }
             }
         }
-        finally
+
+        // Cleanup
+        foreach (var child in childProcesses)
         {
-            // Cleanup
-            foreach (var child in childProcesses)
-            {
-                child.Dispose();
-            }
+            child.Dispose();
         }
     }
 
@@ -339,6 +333,8 @@ public class GameProcessManager
             if (process.HasExited)
                 return;
 
+            var timeoutMs = _config.ShutdownTimeoutMs;
+
             // Try stdin first
             try
             {
@@ -347,7 +343,7 @@ public class GameProcessManager
                     process.StandardInput.WriteLine("stop");
                     process.StandardInput.Flush();
 
-                    using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3)))
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(timeoutMs)))
                     {
                         try
                         {
@@ -374,7 +370,7 @@ public class GameProcessManager
                 {
                     if (NativeMethods.GenerateConsoleCtrlEvent(NativeMethods.CTRL_C_EVENT, (uint)process.Id))
                     {
-                        using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3)))
+                        using (var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(timeoutMs)))
                         {
                             try
                             {
@@ -396,7 +392,7 @@ public class GameProcessManager
             }
 
             // Wait for natural exit
-            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(timeoutMs)))
             {
                 try
                 {

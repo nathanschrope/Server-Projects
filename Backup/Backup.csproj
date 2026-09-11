@@ -11,8 +11,4 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageReference Include="TaskScheduler" Version="2.10.1" />
   </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\CommonLIbrary\CommonLibrary.csproj" />
-  </ItemGroup>
 </Project>
