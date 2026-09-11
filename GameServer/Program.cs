@@ -11,24 +11,6 @@ builder.Logging.ClearProviders();
 builder.Logging.AddLog4Net("log4net.config", false);
 builder.Services.AddLogging();
 
-// Configure host options for graceful shutdown
-builder.Services.Configure<HostOptions>(options =>
-{
-    options.ShutdownTimeout = TimeSpan.FromMinutes(20); // Allow 20 minutes for all servers to stop gracefully
-});
-
-builder.Services.AddSingleton<IServerManager, ServerManager>();
-
-builder.Services.AddOptions<ServerManagerConfig>()
-    .Bind(builder.Configuration.GetRequiredSection(ServerManagerConfig.SectionName))
-    .ValidateOnStart()
-    .ValidateDataAnnotations();
-
-// Add Windows Service support
-builder.Services.AddHostedService<GameWorker>();
-builder.Services.AddWindowsService();
-
-
 // Add Health Controller
 builder.Services.AddControllers();
 builder.WebHost.ConfigureKestrel(options =>
@@ -44,6 +26,21 @@ builder.Services.AddSingleton(new DiscordSocketClient(new DiscordSocketConfig
 builder.Services.AddSingleton<IHealthChecker, HealthChecker>();
 builder.Services.AddHostedService<DiscordWorker>();
 
+// Setting up Servers
+builder.Services.AddSingleton<IServerManager, ServerManager>();
+
+builder.Services.AddOptions<ServerManagerConfig>()
+    .Bind(builder.Configuration.GetRequiredSection(ServerManagerConfig.SectionName))
+    .ValidateOnStart()
+    .ValidateDataAnnotations();
+
+// Add Windows Service support
+builder.Services.AddHostedService<GameWorker>();
+builder.Services.AddWindowsService();
+builder.Services.Configure<HostOptions>(options =>
+{
+    options.ShutdownTimeout = TimeSpan.FromMinutes(20);
+});
 
 var host = builder.Build();
 

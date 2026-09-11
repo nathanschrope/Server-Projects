@@ -21,8 +21,6 @@ public class GameWorker(ILogger<GameWorker> logger, IServerManager serverManager
     {
         logger.LogInformation("GameServer Worker stopping - shutting down all servers");
 
-        // First stop all servers gracefully so they receive shutdown while the worker is still running.
-        logger.LogInformation("Calling serverManager.StopAllAsync to stop all servers");
         try
         {
             await serverManager.StopAllAsync();
