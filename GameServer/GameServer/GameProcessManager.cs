@@ -5,6 +5,18 @@ using System.Runtime.InteropServices;
 namespace GameServer.GameServer;
 
 /// <summary>
+/// P/Invoke declarations for Windows console control.
+/// </summary>
+internal static class NativeMethods
+{
+    public const uint CREATE_NEW_PROCESS_GROUP = 0x00000200;
+    public const uint CTRL_C_EVENT = 0;
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool GenerateConsoleCtrlEvent(uint dwCtrlEvent, uint dwProcessGroupId);
+}
+
+/// <summary>
 /// Manages a generic game server process - starting, monitoring, and restarting.
 /// </summary>
 public class GameProcessManager
@@ -138,107 +150,70 @@ public class GameProcessManager
             {
                 _logger.LogInformation("[{serverName}] Stopping server (PID: {pid})", ServerName, _serverProcess.Id);
 
-                // Try to send stop command via stdin if available
-                try
-                {
-                    _serverProcess.StandardInput.WriteLine("stop");
-                    _serverProcess.StandardInput.Flush();
-                }
-                catch
-                {
-                    // stdin may not be available, continue with WaitForExit
-                }
+                bool stopped = false;
 
-                // Wait for graceful shutdown
-                if (!_serverProcess.WaitForExit(_config.ShutdownTimeoutMs))
+                // Try sending Ctrl+C to the process group on Windows
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    _logger.LogWarning("[{serverName}] Server did not stop gracefully within {timeout}ms, attempting to kill process tree",
-                        ServerName,
-                        _config.ShutdownTimeoutMs);
-
                     try
                     {
-                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                        _logger.LogDebug("[{serverName}] Sending Ctrl+C to process group {pid}", ServerName, _serverProcess.Id);
+                        if (NativeMethods.GenerateConsoleCtrlEvent(NativeMethods.CTRL_C_EVENT, (uint)_serverProcess.Id))
                         {
-                            var psi = new ProcessStartInfo
+                            if (_serverProcess.WaitForExit(5000))
                             {
-                                FileName = "taskkill",
-                                Arguments = $"/PID {_serverProcess.Id} /T /F",
-                                CreateNoWindow = true,
-                                UseShellExecute = false,
-                                RedirectStandardOutput = true,
-                                RedirectStandardError = true
-                            };
-                            var killer = Process.Start(psi);
-                            if (killer != null)
+                                _logger.LogInformation("[{serverName}] Server stopped via Ctrl+C", ServerName);
+                                stopped = true;
+                            }
+                            else
                             {
-                                string outp = killer.StandardOutput.ReadToEnd();
-                                string err = killer.StandardError.ReadToEnd();
-                                killer.WaitForExit();
-                                _logger.LogInformation("[{serverName}] taskkill output: {out}", ServerName, outp);
-                                if (!string.IsNullOrEmpty(err))
-                                    _logger.LogWarning("[{serverName}] taskkill error: {err}", ServerName, err);
+                                _logger.LogWarning("[{serverName}] Server did not stop within 5000ms after Ctrl+C", ServerName);
                             }
                         }
                         else
                         {
-                            // Send SIGTERM to process group, then SIGKILL if needed
-                            try
-                            {
-                                var psi = new ProcessStartInfo
-                                {
-                                    FileName = "kill",
-                                    Arguments = $"-TERM -{_serverProcess.Id}",
-                                    CreateNoWindow = true,
-                                    UseShellExecute = false,
-                                    RedirectStandardOutput = true,
-                                    RedirectStandardError = true
-                                };
-                                var killer = Process.Start(psi);
-                                killer?.WaitForExit(5000);
-                            }
-                            catch { }
-
-                            if (!_serverProcess.WaitForExit(5000))
-                            {
-                                try
-                                {
-                                    var psi2 = new ProcessStartInfo
-                                    {
-                                        FileName = "kill",
-                                        Arguments = $"-KILL -{_serverProcess.Id}",
-                                        CreateNoWindow = true,
-                                        UseShellExecute = false,
-                                        RedirectStandardOutput = true,
-                                        RedirectStandardError = true
-                                    };
-                                    var killer2 = Process.Start(psi2);
-                                    killer2?.WaitForExit(5000);
-                                }
-                                catch { }
-                            }
+                            _logger.LogWarning("[{serverName}] GenerateConsoleCtrlEvent failed, will try stdin 'stop'", ServerName);
                         }
                     }
-                    catch (Exception exKill)
+                    catch (Exception ex)
                     {
-                        _logger.LogError(exKill, "[{serverName}] Error killing process tree", ServerName);
+                        _logger.LogWarning(ex, "[{serverName}] Error sending Ctrl+C, will try stdin 'stop'", ServerName);
                     }
+                }
 
-                    // Give a moment for OS to cleanup
-                    try { _serverProcess.WaitForExit(1000); } catch { }
-                    if (!_serverProcess.HasExited)
+                // If Ctrl+C didn't work, try writing "stop" to stdin
+                if (!stopped)
+                {
+                    try
                     {
-                        _logger.LogWarning("[{serverName}] Process still running after kill attempt, calling Kill()", ServerName);
-                        try
+                        _logger.LogDebug("[{serverName}] Trying stdin 'stop' command", ServerName);
+                        _serverProcess.StandardInput.WriteLine("stop");
+                        _serverProcess.StandardInput.Flush();
+
+                        if (_serverProcess.WaitForExit(5000))
                         {
-                            _serverProcess.Kill();
-                            _serverProcess.WaitForExit(0);
+                            _logger.LogInformation("[{serverName}] Server stopped via stdin 'stop'", ServerName);
+                            stopped = true;
                         }
-                        catch(Exception exKill2)
+                        else
                         {
-                            _logger.LogError(exKill2, "[{serverName}] Final Kill failed", ServerName);
+                            _logger.LogWarning("[{serverName}] Server did not stop within 5000ms after 'stop' command", ServerName);
                         }
                     }
+                    catch
+                    {
+                        _logger.LogWarning("[{serverName}] stdin 'stop' failed, will wait for full timeout", ServerName);
+                    }
+                }
+
+                // If still not stopped, wait for the full timeout before killing
+                if (!stopped && !_serverProcess.WaitForExit(_config.ShutdownTimeoutMs))
+                {
+                    _logger.LogWarning("[{serverName}] Server did not stop gracefully within {timeout}ms, killing process",
+                        ServerName,
+                        _config.ShutdownTimeoutMs);
+                    _serverProcess.Kill();
+                    _serverProcess.WaitForExit(0);
                 }
 
                 _logger.LogInformation("[{serverName}] Server stopped", ServerName);
