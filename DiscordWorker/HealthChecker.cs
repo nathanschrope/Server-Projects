@@ -1,6 +1,6 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 
-namespace GameServer.Discord;
+namespace DiscordWorker;
 
 internal class HealthChecker : IHealthChecker
 {
@@ -14,7 +14,7 @@ internal class HealthChecker : IHealthChecker
         var result = await client.GetAsync("http://localhost:8069/server/health", cancellationToken);
         if (result.IsSuccessStatusCode)
         {
-            string responsestr = await result.Content.ReadAsStringAsync();
+            string responsestr = await result.Content.ReadAsStringAsync(cancellationToken);
             var jsonObject = JsonSerializer.Deserialize<HealthResponse>(responsestr);
 
             if (jsonObject != null)

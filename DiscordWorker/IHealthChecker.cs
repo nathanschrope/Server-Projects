@@ -1,4 +1,4 @@
-﻿namespace GameServer.Discord;
+namespace DiscordWorker;
 
 internal interface IHealthChecker
 {

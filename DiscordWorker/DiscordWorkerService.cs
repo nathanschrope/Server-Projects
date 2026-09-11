@@ -1,9 +1,9 @@
-﻿using Discord;
+using Discord;
 using Discord.WebSocket;
 
-namespace GameServer.Discord;
+namespace DiscordWorker;
 
-internal class DiscordWorker : BackgroundService
+internal class DiscordWorkerService : BackgroundService
 {
     private ILogger _logger;
     private DiscordSocketClient _client;
@@ -11,7 +11,7 @@ internal class DiscordWorker : BackgroundService
     private string _token { get; }
     private CancellationTokenSource? _healthCheckCts;
 
-    public DiscordWorker(ILogger<DiscordWorker> logger, DiscordSocketClient client, IHealthChecker healthChecker)
+    public DiscordWorkerService(ILogger<DiscordWorkerService> logger, DiscordSocketClient client, IHealthChecker healthChecker)
     {
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(client);
@@ -88,7 +88,7 @@ internal class DiscordWorker : BackgroundService
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            var messages = await _healthChecker.GetHealthAsync(CancellationToken.None);
+            var messages = await _healthChecker.GetHealthAsync(cancellationToken);
 
             if (messages.Count != 0)
             {
@@ -98,6 +98,7 @@ internal class DiscordWorker : BackgroundService
 
                     if (channels.Count() > 1)
                     {
+
                         var botChannels = channels.Where(x => x.Name.Equals("bot", StringComparison.OrdinalIgnoreCase));
                         if (botChannels.Any())
                             channels = botChannels;

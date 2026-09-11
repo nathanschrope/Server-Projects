@@ -1,6 +1,3 @@
-using Discord;
-using Discord.WebSocket;
-using GameServer.Discord;
 using GameServer.GameServer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -17,14 +14,6 @@ builder.WebHost.ConfigureKestrel(options =>
 {
     options.ListenAnyIP(8069);
 });
-
-// Add Discord client and health checker
-builder.Services.AddSingleton(new DiscordSocketClient(new DiscordSocketConfig
-{
-    GatewayIntents = GatewayIntents.Guilds
-}));
-builder.Services.AddSingleton<IHealthChecker, HealthChecker>();
-builder.Services.AddHostedService<DiscordWorker>();
 
 // Setting up Servers
 builder.Services.AddSingleton<IServerManager, ServerManager>();
