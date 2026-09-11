@@ -9,6 +9,7 @@ internal class DiscordWorker : BackgroundService
     private DiscordSocketClient _client;
     private IHealthChecker _healthChecker;
     private string _token { get; }
+    private CancellationTokenSource? _healthCheckCts;
 
     public DiscordWorker(ILogger<DiscordWorker> logger, DiscordSocketClient client, IHealthChecker healthChecker)
     {
@@ -38,7 +39,7 @@ internal class DiscordWorker : BackgroundService
             await _client.LoginAsync(TokenType.Bot, _token).ConfigureAwait(false);
             await _client.StartAsync();
 
-            await Task.Delay(Timeout.Infinite);
+            await Task.Delay(Timeout.Infinite, stoppingToken);
         }
         catch (TaskCanceledException)
         {
@@ -50,6 +51,7 @@ internal class DiscordWorker : BackgroundService
         }
         finally
         {
+            _healthCheckCts?.Cancel();
             await _client.StopAsync();
             await _client.LogoutAsync();
         }
@@ -66,7 +68,9 @@ internal class DiscordWorker : BackgroundService
         _logger.LogInformation("Bot connected as {Username}#{Discriminator}",
             _client.CurrentUser.Username, _client.CurrentUser.Discriminator);
 
-        return DoHealthChecksForeverAsync();
+        _healthCheckCts = new CancellationTokenSource();
+        _ = DoHealthChecksForeverAsync(_healthCheckCts.Token);
+        return Task.CompletedTask;
     }
 
     private async Task OnMessageReceivedAsync(SocketMessage message)
@@ -80,9 +84,9 @@ internal class DiscordWorker : BackgroundService
         }
     }
 
-    private async Task DoHealthChecksForeverAsync()
+    private async Task DoHealthChecksForeverAsync(CancellationToken cancellationToken)
     {
-        while (true)
+        while (!cancellationToken.IsCancellationRequested)
         {
             var messages = await _healthChecker.GetHealthAsync(CancellationToken.None);
 
@@ -122,7 +126,14 @@ internal class DiscordWorker : BackgroundService
                     }
                 }
             }
-            await Task.Delay(15000);
+            try
+            {
+                await Task.Delay(15000, cancellationToken);
+            }
+            catch (TaskCanceledException)
+            {
+                break;
+            }
         }
     }
 }
