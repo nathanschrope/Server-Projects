@@ -13,7 +13,7 @@ public sealed record ServerManagerConfig : IValidatableObject
     /// <summary>
     /// Interval (in milliseconds) at which the worker checks server health.
     /// </summary>
-    public int WorkerIntervalMs { get; set; } = 5000;
+    public int WorkerIntervalMs { get; set; } = 15 * 60 * 1000;
 
     /// <summary>
     /// List of game server instances to manage.

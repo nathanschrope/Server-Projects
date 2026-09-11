@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO.Compression;
+using System.Runtime.InteropServices;
 
 namespace GameServer.GameServer;
 
@@ -151,11 +152,93 @@ public class GameProcessManager
                 // Wait for graceful shutdown
                 if (!_serverProcess.WaitForExit(_config.ShutdownTimeoutMs))
                 {
-                    _logger.LogWarning("[{serverName}] Server did not stop gracefully within {timeout}ms, killing process",
+                    _logger.LogWarning("[{serverName}] Server did not stop gracefully within {timeout}ms, attempting to kill process tree",
                         ServerName,
                         _config.ShutdownTimeoutMs);
-                    _serverProcess.Kill();
-                    _serverProcess.WaitForExit(5000);
+
+                    try
+                    {
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                        {
+                            var psi = new ProcessStartInfo
+                            {
+                                FileName = "taskkill",
+                                Arguments = $"/PID {_serverProcess.Id} /T /F",
+                                CreateNoWindow = true,
+                                UseShellExecute = false,
+                                RedirectStandardOutput = true,
+                                RedirectStandardError = true
+                            };
+                            var killer = Process.Start(psi);
+                            if (killer != null)
+                            {
+                                string outp = killer.StandardOutput.ReadToEnd();
+                                string err = killer.StandardError.ReadToEnd();
+                                killer.WaitForExit();
+                                _logger.LogInformation("[{serverName}] taskkill output: {out}", ServerName, outp);
+                                if (!string.IsNullOrEmpty(err))
+                                    _logger.LogWarning("[{serverName}] taskkill error: {err}", ServerName, err);
+                            }
+                        }
+                        else
+                        {
+                            // Send SIGTERM to process group, then SIGKILL if needed
+                            try
+                            {
+                                var psi = new ProcessStartInfo
+                                {
+                                    FileName = "kill",
+                                    Arguments = $"-TERM -{_serverProcess.Id}",
+                                    CreateNoWindow = true,
+                                    UseShellExecute = false,
+                                    RedirectStandardOutput = true,
+                                    RedirectStandardError = true
+                                };
+                                var killer = Process.Start(psi);
+                                killer?.WaitForExit(5000);
+                            }
+                            catch { }
+
+                            if (!_serverProcess.WaitForExit(5000))
+                            {
+                                try
+                                {
+                                    var psi2 = new ProcessStartInfo
+                                    {
+                                        FileName = "kill",
+                                        Arguments = $"-KILL -{_serverProcess.Id}",
+                                        CreateNoWindow = true,
+                                        UseShellExecute = false,
+                                        RedirectStandardOutput = true,
+                                        RedirectStandardError = true
+                                    };
+                                    var killer2 = Process.Start(psi2);
+                                    killer2?.WaitForExit(5000);
+                                }
+                                catch { }
+                            }
+                        }
+                    }
+                    catch (Exception exKill)
+                    {
+                        _logger.LogError(exKill, "[{serverName}] Error killing process tree", ServerName);
+                    }
+
+                    // Give a moment for OS to cleanup
+                    try { _serverProcess.WaitForExit(1000); } catch { }
+                    if (!_serverProcess.HasExited)
+                    {
+                        _logger.LogWarning("[{serverName}] Process still running after kill attempt, calling Kill()", ServerName);
+                        try
+                        {
+                            _serverProcess.Kill();
+                            _serverProcess.WaitForExit(0);
+                        }
+                        catch(Exception exKill2)
+                        {
+                            _logger.LogError(exKill2, "[{serverName}] Final Kill failed", ServerName);
+                        }
+                    }
                 }
 
                 _logger.LogInformation("[{serverName}] Server stopped", ServerName);
