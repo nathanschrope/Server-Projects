@@ -290,7 +290,7 @@ public class GameProcessManager
             // Give children their own timeout to shut down gracefully
             using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
             {
-                await Task.WhenAll(
+                await Task.WhenAny(
                     Task.WhenAll(shutdownTasks),
                     Task.Delay(-1, cts.Token)
                 ).ConfigureAwait(false);
