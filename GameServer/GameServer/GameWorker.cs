@@ -46,9 +46,11 @@ public class GameWorker(ILogger<GameWorker> logger, IServerManager serverManager
             {
                 if (DateTime.Now > nextBackupTime)
                 {
+                    logger.LogWarning("Triggering backup at {Time}", DateTime.Now);
                     await serverManager.TriggerBackupAsync();
 
                     nextBackupTime = DateTime.Now.Date.AddDays(1) + optionsMonitor.CurrentValue.BackupTime.ToTimeSpan();
+                    logger.LogWarning("Next backup at {Time}", nextBackupTime);
                 }
                 else
                 {
