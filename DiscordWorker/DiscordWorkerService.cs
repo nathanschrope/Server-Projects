@@ -94,9 +94,9 @@ internal class DiscordWorkerService : BackgroundService
             { 
                messages = await _healthChecker.GetHealthAsync(cancellationToken);
             }
-            catch
+            catch(Exception ex)
             {
-                _logger.LogError("Health check failed");
+                _logger.LogError(ex, "Health check failed with exception");
             }
 
             _logger.LogInformation("Health check returned {Count} message(s)", messages.Count);

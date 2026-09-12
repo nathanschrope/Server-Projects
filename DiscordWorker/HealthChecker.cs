@@ -21,8 +21,10 @@ internal class HealthChecker(ILogger<HealthChecker> logger) : IHealthChecker
         {
             result = await client.GetAsync("http://localhost:8069/server/health", cts.Token);
         } 
-        catch (OperationCanceledException)
-        { }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while checking server health");
+        }
 
         if (result?.IsSuccessStatusCode is true)
         {
@@ -31,8 +33,10 @@ internal class HealthChecker(ILogger<HealthChecker> logger) : IHealthChecker
             {
                 responsestr = await result.Content.ReadAsStringAsync(cts.Token);
             }
-            catch(OperationCanceledException)
-            { }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error occurred while reading server health response");
+            }
 
             if (responsestr is not null)
             {
