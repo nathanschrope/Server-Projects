@@ -89,7 +89,15 @@ internal class DiscordWorkerService : BackgroundService
         _logger.LogInformation("Starting health check loop...");
         while (!cancellationToken.IsCancellationRequested)
         {
-            var messages = await _healthChecker.GetHealthAsync(cancellationToken);
+            List<string> messages = [];
+            try
+            { 
+               messages = await _healthChecker.GetHealthAsync(cancellationToken);
+            }
+            catch
+            {
+                _logger.LogError("Health check failed");
+            }
 
             _logger.LogInformation("Health check returned {Count} message(s)", messages.Count);
             if (messages.Count != 0)
