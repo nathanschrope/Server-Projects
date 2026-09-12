@@ -12,7 +12,9 @@ public class GameWorker(ILogger<GameWorker> logger, IServerManager serverManager
 
         await serverManager.StartAllAsync();
 
-        nextBackupTime = DateTime.Now.Date.AddDays(1) + optionsMonitor.CurrentValue.BackupTime.ToTimeSpan();
+        nextBackupTime = DateTime.Now.Date + optionsMonitor.CurrentValue.BackupTime.ToTimeSpan();
+        if(nextBackupTime < DateTime.Now)
+            nextBackupTime = nextBackupTime.AddDays(1);
 
         await base.StartAsync(cancellationToken);
     }

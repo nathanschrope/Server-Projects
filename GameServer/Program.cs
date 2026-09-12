@@ -8,6 +8,14 @@ builder.Logging.ClearProviders();
 builder.Logging.AddLog4Net("log4net.config", false);
 builder.Services.AddLogging();
 
+// Add Windows Service support
+builder.Services.AddHostedService<GameWorker>();
+builder.Services.AddWindowsService();
+builder.Services.Configure<HostOptions>(options =>
+{
+    options.ShutdownTimeout = TimeSpan.FromMinutes(20);
+});
+
 // Add Health Controller
 builder.Services.AddControllers();
 builder.WebHost.ConfigureKestrel(options =>
@@ -22,14 +30,6 @@ builder.Services.AddOptions<ServerManagerConfig>()
     .Bind(builder.Configuration.GetRequiredSection(ServerManagerConfig.SectionName))
     .ValidateOnStart()
     .ValidateDataAnnotations();
-
-// Add Windows Service support
-builder.Services.AddHostedService<GameWorker>();
-builder.Services.AddWindowsService();
-builder.Services.Configure<HostOptions>(options =>
-{
-    options.ShutdownTimeout = TimeSpan.FromMinutes(20);
-});
 
 var host = builder.Build();
 
