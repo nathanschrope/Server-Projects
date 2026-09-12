@@ -60,14 +60,14 @@ if (-not $discordWorkerService) {
 	}
 }
 
-cd C:\Projects\Server\GameServer
+cd C:\Projects\Server
 git pull origin main
 dotnet build
+
+cd C:\Projects\Server\GameServer
 dotnet publish
 
 cd C:\Projects\Server\DiscordWorker
-git pull origin main
-dotnet build
 dotnet publish
 
 cd C:\Projects\Server
