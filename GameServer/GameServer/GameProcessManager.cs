@@ -185,7 +185,7 @@ public class GameProcessManager
             catch (OperationCanceledException)
             {
                 _logger.LogWarning("[{serverName}] Server did not exit in time, force killing (PID: {pid})", ServerName, processToStop.Id);
-                processToStop.Kill();
+                processToStop.Kill(true);
                 using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(_config.ShutdownTimeoutMs));
                 await processToStop.WaitForExitAsync(cts.Token);
                 return;
