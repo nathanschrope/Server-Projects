@@ -85,6 +85,8 @@ sc.exe failure $discordWorkerName reset= 60 actions= restart/5000
 Write-Host "Starting $discordWorkerName..."
 Start-Service -Name $discordWorkerName
 
+Start-Sleep -Seconds 5
+
 $gamePath = 'C:\Projects\Server\GameServer\bin\Release\net10.0\publish\GameServer.exe'
 if (-not (Test-Path $gamePath)) {
 	Write-Error "GameServer.exe not found at: $gamePath"
