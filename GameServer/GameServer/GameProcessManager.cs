@@ -156,74 +156,38 @@ public class GameProcessManager
         {
             _logger.LogInformation("[{serverName}] Stopping server (PID: {pid})", ServerName, processToStop.Id);
 
-            bool stopped = false;
-
-            // Try writing "stop" to stdin first (works better when running as a service)
             try
             {
-                _logger.LogDebug("[{serverName}] Trying stdin 'stop' command", ServerName);
                 if (processToStop.StandardInput.BaseStream.CanWrite)
                 {
                     processToStop.StandardInput.WriteLine("stop");
                     processToStop.StandardInput.Flush();
 
-                    using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
-                    {
-                        try
-                        {
-                            await processToStop.WaitForExitAsync(cts.Token);
-                            _logger.LogInformation("[{serverName}] Server stopped via stdin 'stop'", ServerName);
-                            stopped = true;
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            _logger.LogWarning("[{serverName}] Server did not stop within 5000ms after 'stop' command", ServerName);
-                        }
-                    }
+                    using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(_config.ShutdownTimeoutMs));
+                    await processToStop.WaitForExitAsync(cts.Token);
+                    return;
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                _logger.LogWarning("[{serverName}] stdin 'stop' failed, will try Ctrl+C", ServerName);
+                _logger.LogWarning(ex, "[{serverName}] Error sending stop command to server (PID: {pid})", ServerName, processToStop.Id);
             }
 
-            // If still not stopped, wait for the full timeout before killing
-            if (!stopped)
+            try
             {
-                using (var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(_config.ShutdownTimeoutMs)))
-                {
-                    try
-                    {
-                        _logger.LogDebug("[{serverName}] Waiting for graceful shutdown timeout {timeout}ms", ServerName, _config.ShutdownTimeoutMs);
-                        await processToStop.WaitForExitAsync(cts.Token);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        _logger.LogWarning("[{serverName}] Server did not stop gracefully within {timeout}ms, checking for child processes",
-                            ServerName,
-                            _config.ShutdownTimeoutMs);
-
-                        // Get child processes before killing parent
-                        var childProcesses = GetChildProcesses(processToStop.Id);
-
-                        if (childProcesses.Count > 0)
-                        {
-                            _logger.LogInformation("[{serverName}] Found {count} child process(es), attempting graceful shutdown", ServerName, childProcesses.Count);
-                            await ShutdownChildProcessesGracefully(childProcesses);
-                        }
-
-                        // Kill the parent if still running
-                        if (!processToStop.HasExited)
-                        {
-                            _logger.LogDebug("[{serverName}] Killing parent process (PID: {pid})", ServerName, processToStop.Id);
-                            processToStop.Kill();
-                            processToStop.WaitForExit(5000);
-                        }
-                    }
-                }
+                processToStop.CloseMainWindow();
+                using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(_config.ShutdownTimeoutMs));
+                await processToStop.WaitForExitAsync(cts.Token);
+                return;
             }
-
-            _logger.LogInformation("[{serverName}] Server stopped", ServerName);
+            catch (OperationCanceledException)
+            {
+                _logger.LogWarning("[{serverName}] Server did not exit in time, force killing (PID: {pid})", ServerName, processToStop.Id);
+                processToStop.Kill();
+                using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(_config.ShutdownTimeoutMs));
+                await processToStop.WaitForExitAsync(cts.Token);
+                return;
+            }
         }
         catch (Exception ex)
         {
