@@ -182,7 +182,7 @@ public class GameProcessManager
                 await processToStop.WaitForExitAsync(cts.Token);
                 return;
             }
-            catch (OperationCanceledException)
+            catch (Exception)
             {
                 _logger.LogWarning("[{serverName}] Server did not exit in time, force killing (PID: {pid})", ServerName, processToStop.Id);
                 processToStop.Kill(true);
