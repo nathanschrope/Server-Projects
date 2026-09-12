@@ -15,33 +15,58 @@ internal class HealthChecker : IHealthChecker
         using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(TimeSpan.FromSeconds(10));
 
-        var result = await client.GetAsync("http://localhost:8069/server/health", cts.Token);
-        if (result.IsSuccessStatusCode)
+        HttpResponseMessage? result = null;
+        try
         {
-            string responsestr = await result.Content.ReadAsStringAsync(cts.Token);
-            var jsonObject = JsonSerializer.Deserialize<HealthResponse>(responsestr);
+            result = await client.GetAsync("http://localhost:8069/server/health", cts.Token);
+        } 
+        catch (OperationCanceledException)
+        { }
 
-            if (jsonObject != null)
+        if (result?.IsSuccessStatusCode is true)
+        {
+            string? responsestr = null;
+            try
             {
-                if (isServerDown)
-                {
-                    isServerDown = false;
-                    messages.Add("server is back up");
-                }
+                responsestr = await result.Content.ReadAsStringAsync(cts.Token);
+            }
+            catch(OperationCanceledException)
+            { }
 
-                if (_serverStatus == null)
+            if (responsestr is not null)
+            {
+                var jsonObject = JsonSerializer.Deserialize<HealthResponse>(responsestr);
+
+                if (jsonObject != null)
                 {
-                    _serverStatus = jsonObject;
+                    if (isServerDown)
+                    {
+                        isServerDown = false;
+                        messages.Add("server is back up");
+                    }
+
+                    if (_serverStatus == null)
+                    {
+                        _serverStatus = jsonObject;
+                    }
+                    else
+                    {
+                        var differences = jsonObject.StatusList.Except(_serverStatus.StatusList, new ApplicationStatusComparer());
+                        foreach (var dif in differences)
+                        {
+                            messages.Add($"{dif.Name} is {dif.Status} ({dif.NumberOfProcesses})");
+                        }
+
+                        _serverStatus.StatusList = jsonObject.StatusList;
+                    }
                 }
                 else
                 {
-                    var differences = jsonObject.StatusList.Except(_serverStatus.StatusList, new ApplicationStatusComparer());
-                    foreach (var dif in differences)
+                    if (!isServerDown)
                     {
-                        messages.Add($"{dif.Name} is {dif.Status} ({dif.NumberOfProcesses})");
+                        isServerDown = true;
+                        messages.Add("server is down");
                     }
-
-                    _serverStatus.StatusList = jsonObject.StatusList;
                 }
             }
             else
