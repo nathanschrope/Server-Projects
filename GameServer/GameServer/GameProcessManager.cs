@@ -158,6 +158,7 @@ public class GameProcessManager
 
             try
             {
+                // this only works for minecraft right now
                 if (processToStop.StandardInput.BaseStream.CanWrite)
                 {
                     processToStop.StandardInput.WriteLine("stop");
@@ -176,6 +177,7 @@ public class GameProcessManager
             try
             {
                 processToStop.CloseMainWindow();
+                processToStop.Close();
                 using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(_config.ShutdownTimeoutMs));
                 await processToStop.WaitForExitAsync(cts.Token);
                 return;

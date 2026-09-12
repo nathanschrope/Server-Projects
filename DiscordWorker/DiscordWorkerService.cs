@@ -129,7 +129,7 @@ internal class DiscordWorkerService : BackgroundService
             }
             try
             {
-                await Task.Delay(15000, cancellationToken);
+                await Task.Delay(1000, cancellationToken);
             }
             catch (TaskCanceledException)
             {
