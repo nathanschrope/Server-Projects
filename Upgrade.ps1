@@ -25,9 +25,9 @@ if (-not $gameServerService) {
 
 	$gameCheck = Get-Service -Name $gameServerName -ErrorAction SilentlyContinue
 	if (-not $gameCheck) {
-		Write-Host "✓ Service '$gameServerName' uninstalled successfully!" -ForegroundColor Green
+		Write-Host "Service '$gameServerName' uninstalled successfully!" -ForegroundColor Green
 	} else {
-		Write-Error "✗ Failed to uninstall service. It may be locked."
+		Write-Error "Failed to uninstall service. It may be locked."
 		exit 1
 	}
 }
@@ -53,9 +53,9 @@ if (-not $discordWorkerService) {
 
 	$discordCheck = Get-Service -Name $discordWorkerName -ErrorAction SilentlyContinue
 	if (-not $discordCheck) {
-		Write-Host "✓ Service '$discordWorkerName' uninstalled successfully!" -ForegroundColor Green
+		Write-Host "Service '$discordWorkerName' uninstalled successfully!" -ForegroundColor Green
 	} else {
-		Write-Error "✗ Failed to uninstall service. It may be locked."
+		Write-Error "Failed to uninstall service. It may be locked."
 		exit 1
 	}
 }
