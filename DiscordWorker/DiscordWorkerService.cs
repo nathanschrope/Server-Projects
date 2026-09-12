@@ -86,10 +86,12 @@ internal class DiscordWorkerService : BackgroundService
 
     private async Task DoHealthChecksForeverAsync(CancellationToken cancellationToken)
     {
+        _logger.LogInformation("Starting health check loop...");
         while (!cancellationToken.IsCancellationRequested)
         {
             var messages = await _healthChecker.GetHealthAsync(cancellationToken);
 
+            _logger.LogInformation("Health check returned {Count} message(s)", messages.Count);
             if (messages.Count != 0)
             {
                 foreach (var guild in _client.Guilds)

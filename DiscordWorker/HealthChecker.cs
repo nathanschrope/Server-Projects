@@ -2,13 +2,14 @@ using System.Text.Json;
 
 namespace DiscordWorker;
 
-internal class HealthChecker : IHealthChecker
+internal class HealthChecker(ILogger<HealthChecker> logger) : IHealthChecker
 {
     private bool isServerDown = false;
     private HealthResponse? _serverStatus { get; set; } = null;
 
     public async Task<List<string>> GetHealthAsync(CancellationToken cancellationToken)
     {
+        logger.LogInformation("Checking server health...");
         List<string> messages = [];
         HttpClient client = new();
 
