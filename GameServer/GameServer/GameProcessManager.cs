@@ -67,13 +67,13 @@ public class GameProcessManager
 
         lock (_lockObject)
         {
-            _runningStart = true;
-
             if (IsRunning)
             {
                 _logger.LogInformation("[{serverName}] Server is already running (PID: {pid})", ServerName, _serverProcess?.Id);
                 return true;
             }
+
+            _runningStart = true;
 
             if (!string.IsNullOrEmpty(_config.UpdateScript))
             {
