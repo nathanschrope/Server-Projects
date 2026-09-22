@@ -71,6 +71,7 @@ internal class HealthChecker(ILogger<HealthChecker> logger) : IHealthChecker
                     {
                         isServerDown = true;
                         messages.Add("server is down");
+                        _serverStatus?.StatusList.Clear();
                     }
                 }
             }
@@ -80,6 +81,7 @@ internal class HealthChecker(ILogger<HealthChecker> logger) : IHealthChecker
                 {
                     isServerDown = true;
                     messages.Add("server is down");
+                    _serverStatus?.StatusList.Clear();
                 }
             }
         }
@@ -89,6 +91,7 @@ internal class HealthChecker(ILogger<HealthChecker> logger) : IHealthChecker
             {
                 isServerDown = true;
                 messages.Add("server is down");
+                _serverStatus?.StatusList.Clear();
             }
         }
         client.Dispose();

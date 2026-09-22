@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.IO.Compression;
-using System.Management;
 using System.Runtime.InteropServices;
 
 namespace GameServer.GameServer;
@@ -26,6 +25,7 @@ public class GameProcessManager
     private readonly GameProcessManagerConfig _config;
     private Process? _serverProcess;
     private readonly object _lockObject = new();
+    private volatile bool _runningStart = false;
     private const string DATETIME_PATTERN = "yyyyMMdd";
 
     public string ServerName => _config.Name;
@@ -42,30 +42,37 @@ public class GameProcessManager
     /// </summary>
     public async Task<bool> StartServerAsync()
     {
+        if (string.IsNullOrWhiteSpace(_config.FileName))
+        {
+            _logger.LogError("[{serverName}] FileName not configured", ServerName);
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(_config.WorkingDirectory))
+        {
+            _logger.LogError("[{serverName}] WorkingDirectory not configured", ServerName);
+            return false;
+        }
+
+        if (!Directory.Exists(_config.WorkingDirectory))
+        {
+            _logger.LogError("[{serverName}] Working directory does not exist: {path}", ServerName, _config.WorkingDirectory);
+            return false;
+        }
+
+        if (_runningStart)
+        {
+            return true;
+        }
+
         lock (_lockObject)
         {
+            _runningStart = true;
+
             if (IsRunning)
             {
                 _logger.LogInformation("[{serverName}] Server is already running (PID: {pid})", ServerName, _serverProcess?.Id);
                 return true;
-            }
-
-            if (string.IsNullOrWhiteSpace(_config.FileName))
-            {
-                _logger.LogError("[{serverName}] FileName not configured", ServerName);
-                return false;
-            }
-
-            if (string.IsNullOrWhiteSpace(_config.WorkingDirectory))
-            {
-                _logger.LogError("[{serverName}] WorkingDirectory not configured", ServerName);
-                return false;
-            }
-
-            if (!Directory.Exists(_config.WorkingDirectory))
-            {
-                _logger.LogError("[{serverName}] Working directory does not exist: {path}", ServerName, _config.WorkingDirectory);
-                return false;
             }
 
             if (!string.IsNullOrEmpty(_config.UpdateScript))
@@ -131,6 +138,10 @@ public class GameProcessManager
                 _logger.LogError(ex, "[{serverName}] Error starting server", ServerName);
                 return false;
             }
+            finally
+            {
+                _runningStart = false;
+            }
         }
     }
 
@@ -149,6 +160,7 @@ public class GameProcessManager
                 return;
             }
 
+            _runningStart = true; // hopefully prevents startup being called after stop
             processToStop = _serverProcess;
         }
 
@@ -198,6 +210,7 @@ public class GameProcessManager
         {
             lock (_lockObject)
             {
+                _runningStart = false;
                 if (_serverProcess == processToStop)
                 {
                     _serverProcess?.Dispose();
@@ -205,199 +218,6 @@ public class GameProcessManager
                 }
             }
         }
-    }
-
-    /// <summary>
-    /// Gets all child processes of a given parent process.
-    /// </summary>
-    private List<Process> GetChildProcesses(int parentPid)
-    {
-        var childProcesses = new List<Process>();
-        try
-        {
-            foreach (var proc in Process.GetProcesses())
-            {
-                try
-                {
-                    var parentId = GetParentProcessId(proc);
-                    if (parentId == parentPid)
-                    {
-                        childProcesses.Add(proc);
-                    }
-                }
-                catch
-                {
-                    // Ignore access errors
-                }
-            }
-        }
-        catch
-        {
-            // Ignore errors getting process list
-        }
-        return childProcesses;
-    }
-
-    /// <summary>
-    /// Attempts graceful shutdown of child processes.
-    /// </summary>
-    private async Task ShutdownChildProcessesGracefully(List<Process> childProcesses)
-    {
-        var shutdownTasks = new List<Task>();
-
-        foreach (var child in childProcesses)
-        {
-            shutdownTasks.Add(ShutdownSingleProcessGracefully(child));
-        }
-
-        try
-        {
-            // Wait for all children to complete their shutdown attempts (each has its own timeout)
-            await Task.WhenAll(shutdownTasks).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "[{serverName}] Error during child process shutdown", ServerName);
-        }
-
-        // Force kill any remaining children
-        foreach (var child in childProcesses)
-        {
-            if (!child.HasExited)
-            {
-                _logger.LogWarning("[{serverName}] Child process (PID: {pid}) did not stop, force killing",
-                    ServerName, child.Id);
-                try
-                {
-                    child.Kill();
-                    child.WaitForExit(5000);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "[{serverName}] Error force killing child process (PID: {pid})", ServerName, child.Id);
-                }
-            }
-        }
-
-        // Cleanup
-        foreach (var child in childProcesses)
-        {
-            child.Dispose();
-        }
-    }
-
-    /// <summary>
-    /// Attempts graceful shutdown of a single process.
-    /// </summary>
-    private async Task ShutdownSingleProcessGracefully(Process process)
-    {
-        try
-        {
-            _logger.LogDebug("[{serverName}] Attempting graceful shutdown of child process (PID: {pid})", ServerName, process.Id);
-
-            if (process.HasExited)
-                return;
-
-            var timeoutMs = _config.ShutdownTimeoutMs;
-
-            // Try stdin first
-            try
-            {
-                if (process.StandardInput.BaseStream.CanWrite)
-                {
-                    process.StandardInput.WriteLine("stop");
-                    process.StandardInput.Flush();
-
-                    using (var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(timeoutMs)))
-                    {
-                        try
-                        {
-                            await process.WaitForExitAsync(cts.Token);
-                            _logger.LogInformation("[{serverName}] Child process (PID: {pid}) stopped via stdin", ServerName, process.Id);
-                            return;
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            _logger.LogDebug("[{serverName}] Child process (PID: {pid}) did not respond to stdin", ServerName, process.Id);
-                        }
-                    }
-                }
-            }
-            catch
-            {
-                // stdin not available
-            }
-
-            // Try Ctrl+C if running on Windows
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                try
-                {
-                    if (NativeMethods.GenerateConsoleCtrlEvent(NativeMethods.CTRL_C_EVENT, (uint)process.Id))
-                    {
-                        using (var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(timeoutMs)))
-                        {
-                            try
-                            {
-                                await process.WaitForExitAsync(cts.Token);
-                                _logger.LogInformation("[{serverName}] Child process (PID: {pid}) stopped via Ctrl+C", ServerName, process.Id);
-                                return;
-                            }
-                            catch (OperationCanceledException)
-                            {
-                                _logger.LogDebug("[{serverName}] Child process (PID: {pid}) did not respond to Ctrl+C", ServerName, process.Id);
-                            }
-                        }
-                    }
-                }
-                catch
-                {
-                    // Ctrl+C failed
-                }
-            }
-
-            // Wait for natural exit
-            using (var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(timeoutMs)))
-            {
-                try
-                {
-                    await process.WaitForExitAsync(cts.Token);
-                    _logger.LogInformation("[{serverName}] Child process (PID: {pid}) exited", ServerName, process.Id);
-                }
-                catch (OperationCanceledException)
-                {
-                    _logger.LogWarning("[{serverName}] Child process (PID: {pid}) still running after all shutdown attempts", ServerName, process.Id);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "[{serverName}] Error shutting down child process (PID: {pid})", ServerName, process.Id);
-        }
-    }
-
-    /// <summary>
-    /// Gets the parent process ID using WMI.
-    /// </summary>
-    private int GetParentProcessId(Process process)
-    {
-        try
-        {
-            var query = $"SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {process.Id}";
-            using (var searcher = new System.Management.ManagementObjectSearcher(query))
-            {
-                var results = searcher.Get();
-                foreach (var obj in results)
-                {
-                    return Convert.ToInt32(obj["ParentProcessId"]);
-                }
-            }
-        }
-        catch
-        {
-            // If WMI fails, return -1
-        }
-        return -1;
     }
 
     /// <summary>
